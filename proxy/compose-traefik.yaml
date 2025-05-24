@@ -1,0 +1,15 @@
+services:
+  traefik-proxy:
+    image: traefik:3.4.0
+    container_name: traefik-proxy
+    ports:
+      - 80:80
+      - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik.yaml:/etc/traefik/traefik.yaml
+    networks:
+      - path-deployments-net
+networks:
+  path-deployments-net:
+    external: true
