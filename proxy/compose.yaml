@@ -1,0 +1,12 @@
+services:
+  proxy:
+    image: nginx:1.27
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - path-deployments-net
+networks:
+  path-deployments-net:
+    external: true

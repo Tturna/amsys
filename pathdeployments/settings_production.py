@@ -124,9 +124,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-FORCE_SCRIPT_NAME = '/one'
+app_name = getenv('DJANGO_APP_NAME', 'default')
 
-STATIC_URL = 'one/static/'
+FORCE_SCRIPT_NAME = f'/{app_name}'
+
+STATIC_URL = f'{app_name}/static/'
 STATIC_ROOT = BASE_DIR / 'static_production'
 STATICFILES_DIRS = [
     f"{BASE_DIR}/static"
