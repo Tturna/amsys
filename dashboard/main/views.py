@@ -7,12 +7,10 @@ from subprocess import run
 from datetime import datetime
 
 def index(request):
-    form = forms.AppInstanceForm()
     running_instances = AppInstanceModel.objects.filter(is_running=True)
     stopped_instances = AppInstanceModel.objects.filter(is_running=False)
 
     context = {
-        "form": form,
         "running_instances": running_instances,
         "stopped_instances": stopped_instances
     }
@@ -20,9 +18,19 @@ def index(request):
     return render(request, "index.html", context)
 
 def create_app_instance(request):
+    if request.method == "GET":
+        form = forms.AppInstanceForm()
+
+        context = {
+            "form": form
+        }
+
+        return render(request, "create_instance.html", context)
+
     if request.method != "POST":
         return HttpResponseRedirect(reverse("index"))
 
+    # Handle POST request
     form = forms.AppInstanceForm(request.POST)
 
     if (not form.is_valid()):

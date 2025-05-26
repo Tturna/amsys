@@ -1,21 +1,8 @@
 {% load static %}
-
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Provisioner Dashboard</title>
-    <!-- <link rel="stylesheet" href="style.css"> -->
-  </head>
-  <body>
+{% block body %}
     <h1>Provisioner Dashboard</h1>
-    <form action="{% url 'create_app_instance' %}" method="POST">
-        {% csrf_token %}
-        {{ form }}
-        <input type="submit" value="Create" />
-    </form>
+
+    <a href="{% url 'create_app_instance' %}"><button>Create new instance</button></a>
 
     <h2>Running app instances</h2>
     {% for instance in running_instances %}
@@ -38,5 +25,4 @@
     {% endfor %}
 
     <script src="{% static 'index.js' %}"></script>
-  </body>
-</html>
+{% endblock %}

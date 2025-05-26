@@ -1,0 +1,9 @@
+{% block body %}
+    <h1>Provisioner Dashboard</h1>
+    <h2>Create new app instance</h2>
+    <form action="{% url 'create_app_instance' %}" method="POST">
+        {% csrf_token %}
+        {{ form }}
+        <input type="submit" value="Create" />
+    </form>
+{% endblock %}
