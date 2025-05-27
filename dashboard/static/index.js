@@ -7,8 +7,16 @@ function call_stop_instance(app_name) {
 
     fetch(`/stop_instance/${app_name}`)
     .then(response => {
-        console.log(response);
         status_span.innerText = "Stopped";
+        window.location.reload();
+    });
+}
+
+function call_remove_instance(app_name) {
+    console.log(`removing ${app_name}`);
+
+    fetch(`/remove_instance/${app_name}`)
+    .then(response => {
         window.location.reload();
     });
 }

@@ -8,20 +8,33 @@
     {% for instance in running_instances %}
     <p>
     {{ instance.app_name }}
-    @<a href="http://localhost/{{ instance.url_path }}">/{{ instance.url_path }}</a>
+    @<a href="/{{ instance.url_path }}">/{{ instance.url_path }}</a>
     - <span id="{{ instance.app_name }}_status">Running</span>
     - {{ instance.created_at }}
+    <a href="/view_instance/{{ instance.app_name }}"><button>View</button></a>
     <button id="{{ instance.app_name }}_stop_button" onclick="call_stop_instance('{{ instance.app_name }}')">Stop</button>
     </p>
     {% endfor %}
 
     <h2>Stopped app instances</h2>
-    {% for instance in stopped_instances %}
+    {% for instance in stopped_existing_instances %}
     <p>
     {{ instance.app_name }}
     @/{{ instance.url_path }}
     - Stopped
     - {{ instance.created_at }}</p>
+    {% endfor %}
+
+    <h2>Missing instances</h2>
+    <h3>These instances have been stopped and can't be found by Docker</h3>
+    {% for instance in stopped_nonexistent_instances %}
+    <p>
+    {{ instance.app_name }}
+    @/{{ instance.url_path }}
+    - Stopped
+    - {{ instance.created_at }}
+    <button id="{{ instance.app_name }}_remove_button" onclick="call_remove_instance('{{ instance.app_name }}')">Remove</button>
+    </p>
     {% endfor %}
 
     <script src="{% static 'index.js' %}"></script>

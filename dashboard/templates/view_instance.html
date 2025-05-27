@@ -1,0 +1,20 @@
+{% block body %}
+
+<h1>Provisioner Dashboard</h1>
+<h2>{{ instance.app_name }}</h2>
+<p>Hosted at <a href="http://localhost/{{ instance.url_path }}">http://localhost/{{ instance.url_path }}</a></p>
+
+{% if instance.is_running %}
+<p>Instance is running</p>
+{% else %}
+<p>Instance is stopped</p>
+{% endif %}
+
+<p>Created at {{ instance.created_at }}</p>
+
+<h3>Can send files to:</h3>
+{% for dest_connection in destinations %}
+<p><a href="/view_instance/{{ dest_connection.instance_to.url_path }}">{{ dest_connection.instance_to.app_name }}</a></p>
+{% endfor %}
+
+{% endblock %}
