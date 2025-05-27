@@ -12,9 +12,13 @@
 
 <p>Created at {{ instance.created_at }}</p>
 
+{% if destinations %}
 <h3>Can send files to:</h3>
 {% for dest_connection in destinations %}
 <p><a href="/view_instance/{{ dest_connection.instance_to.url_path }}">{{ dest_connection.instance_to.app_name }}</a></p>
 {% endfor %}
+{% else %}
+<h3>No file share destinations defined</h3>
+{% endif %}
 
 {% endblock %}
