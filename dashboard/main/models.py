@@ -1,8 +1,8 @@
 from django.db import models
 
 class AppInstanceModel(models.Model):
-    app_name = models.CharField(max_length=20)
-    url_path = models.CharField(max_length=20)
+    app_name = models.CharField(max_length=20, verbose_name="App name")
+    url_path = models.CharField(max_length=20, verbose_name="URL path", blank=True, help_text="Leave empty to match app name")
     is_running = models.BooleanField()
     created_at = models.DateTimeField()
 

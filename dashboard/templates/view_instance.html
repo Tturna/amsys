@@ -6,11 +6,15 @@
 
 {% if instance.is_running %}
 <p>Instance is running</p>
+<button id="{{ instance.app_name }}_stop_button" onclick="call_stop_instance('{{ instance.app_name }}')">Stop</button>
 {% else %}
 <p>Instance is stopped</p>
+<button id="{{ instance.app_name }}_remove_button" onclick="call_remove_instance('{{ instance.app_name }}')">Remove</button>
 {% endif %}
 
 <p>Created at {{ instance.created_at }}</p>
+
+<a href="{% url 'edit_instance' instance.app_name %}"><button>Edit</button></a>
 
 {% if destinations %}
 <h3>Can send files to:</h3>

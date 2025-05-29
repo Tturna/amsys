@@ -109,3 +109,46 @@ def view_instance(request, app_name):
     }
 
     return render(request, "view_instance.html", context)
+
+def edit_instance(request, app_name):
+    instance = get_object_or_404(AppInstanceModel, app_name=app_name)
+    defined_connections = AppConnectionModel.objects.filter(instance_from=instance)
+    defined_destinations = [conn.instance_to for conn in defined_connections]
+    form = None
+
+    if request.method == "GET":
+        form = forms.AppInstanceForm(instance=instance, initial={ "transmit_destinations": defined_destinations })
+
+        context = {
+            "instance": instance,
+            "form": form
+        }
+
+        return render(request, "edit_instance.html", context)
+    elif request.method == "POST":
+        form = forms.AppInstanceForm(request.POST, instance=instance)
+
+        if (form.is_valid()):
+            form.save()
+
+            transmit_destinations = form.cleaned_data["transmit_destinations"]
+
+            # Remove unticked connections
+            for conn in defined_connections:
+                if conn.instance_to not in transmit_destinations:
+                    conn.delete()
+
+            # Add ticked connections
+            for dest in transmit_destinations:
+                # Skip already existing ones
+                if dest in defined_destinations:
+                    continue
+
+                connection = AppConnectionModel(instance_from=instance, instance_to=dest)
+                connection.save()
+
+            # Prevent double posting and stuff
+            return HttpResponseRedirect(reverse("edit_instance", args=[instance.app_name]))
+    else:
+        return HttpResponseRedirect(reverse("index"))
+
