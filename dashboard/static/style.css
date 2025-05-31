@@ -1,0 +1,8 @@
+li input {
+    border: inherit;
+    background: inherit;
+    padding: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    cursor: pointer;
+}

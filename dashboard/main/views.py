@@ -151,4 +151,3 @@ def edit_instance(request, app_name):
             return HttpResponseRedirect(reverse("edit_instance", args=[instance.app_name]))
     else:
         return HttpResponseRedirect(reverse("index"))
-

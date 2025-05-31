@@ -7,9 +7,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Provisioner Dashboard</title>
-    <!-- <link rel="stylesheet" href="style.css"> -->
+    <link rel="stylesheet" href="{% static 'style.css' %}">
   </head>
   <body>
+      <nav>
+          <ul>
+              <li><a href="{% url 'index' %}">Instances</a></li>
+              {% if request.user.is_authenticated %}
+              <li>
+                  <form method="POST" action="{% url 'logout' %}">
+                      {% csrf_token %}
+                      <input type="submit" value="Logout">
+                  </form>
+              </li>
+              {% else %}
+              <li><a href="{% url 'login' %}">Login</a></li>
+              {% endif %}
+          </ul>
+      </nav>
       {% block body %}
       {% endblock %}
   </body>
