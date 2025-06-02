@@ -1,7 +1,8 @@
 from django.shortcuts import render, reverse, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
-from . import forms
+from django.contrib.auth.decorators import login_required, permission_required
 from .models import AppInstanceModel, AppConnectionModel
+from . import forms
 
 from subprocess import run
 from datetime import datetime
@@ -33,6 +34,8 @@ def index(request):
 
     return render(request, "index.html", context)
 
+@login_required
+@permission_required("main.add_appinstancemodel")
 def create_app_instance(request):
     if request.method == "GET":
         form = forms.AppInstanceForm()
@@ -84,6 +87,8 @@ def create_app_instance(request):
 
     return HttpResponseRedirect(reverse("index"))
 
+@login_required
+@permission_required("main.change_appinstancemodel")
 def stop_instance(request, app_name):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
 
@@ -93,6 +98,8 @@ def stop_instance(request, app_name):
 
     return HttpResponse(status=204)
 
+@login_required
+@permission_required("main.delete_appinstancemodel")
 def remove_instance(request, app_name):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
     instance.delete()
@@ -110,6 +117,7 @@ def view_instance(request, app_name):
 
     return render(request, "view_instance.html", context)
 
+@login_required
 def edit_instance(request, app_name):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
     defined_connections = AppConnectionModel.objects.filter(instance_from=instance)

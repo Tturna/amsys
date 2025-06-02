@@ -2,7 +2,7 @@ from django import forms
 from .models import AppInstanceModel
 
 class AppInstanceForm(forms.ModelForm):
-    transmit_destinations = forms.ModelMultipleChoiceField(queryset=None, widget=forms.CheckboxSelectMultiple, required=False)
+    transmit_destinations = forms.ModelMultipleChoiceField(queryset=AppInstanceModel.objects.all(), widget=forms.CheckboxSelectMultiple, required=False)
 
     class Meta:
         model = AppInstanceModel
@@ -11,13 +11,16 @@ class AppInstanceForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.instance = kwargs.get("instance", None)
-        self.uneditable_fields = ["app_name", "url_path"]
+        instance_arg = kwargs.get("instance", None)
+        if (instance_arg):
+            self.instance = instance_arg
 
-        self.fields["transmit_destinations"].queryset = AppInstanceModel.objects.exclude(app_name=self.instance.app_name)
+        self.uneditable_fields = ["app_name", "url_path"]
 
         # If form is created from an existing model (editing form)
         if self.instance and self.instance.pk:
+            self.fields["transmit_destinations"].queryset = AppInstanceModel.objects.exclude(app_name=self.instance.app_name)
+
             for field in self.uneditable_fields:
                 self.fields[field].widget.attrs["disabled"] = True
                 # Make uneditable fields get past validation
