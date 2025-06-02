@@ -3,7 +3,11 @@
 {% block body %}
     <h1>Provisioner Dashboard</h1>
 
+    {% if perms.main.add_appinstancemodel %}
     <a href="{% url 'create_app_instance' %}"><button>Create new instance</button></a>
+    {% else %}
+    <button disabled="disabled">Create new instance</button>
+    {% endif %}
 
     <h2>Running app instances</h2>
     {% for instance in running_instances %}
@@ -31,7 +35,11 @@
     {% endfor %}
 
     <h2>Missing instances</h2>
-    <h3>These instances have been stopped and can't be found by Docker</h3>
+
+    {% if stopped_nonexistent_instances %}
+        <h3>These instances have been stopped and can't be found by Docker</h3>
+    {% endif %}
+
     {% for instance in stopped_nonexistent_instances %}
     <p>
     {{ instance.app_name }}

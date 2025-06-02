@@ -118,6 +118,7 @@ def view_instance(request, app_name):
     return render(request, "view_instance.html", context)
 
 @login_required
+@permission_required("main.change_appinstancemodel")
 def edit_instance(request, app_name):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
     defined_connections = AppConnectionModel.objects.filter(instance_from=instance)

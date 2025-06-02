@@ -6,16 +6,30 @@
 <p>Hosted at <a href="http://localhost/{{ instance.url_path }}">http://localhost/{{ instance.url_path }}</a></p>
 
 {% if instance.is_running %}
-<p>Instance is running</p>
-<button id="{{ instance.app_name }}_stop_button" onclick="call_stop_instance('{{ instance.app_name }}')">Stop</button>
+    <p>Instance is running</p>
+
+    {% if perms.main.change_appinstancemodel %}
+        <button id="{{ instance.app_name }}_stop_button" onclick="call_stop_instance('{{ instance.app_name }}')">Stop</button>
+    {% else %}
+        <button disabled="disabled">Stop</button>
+    {% endif %}
 {% else %}
-<p>Instance is stopped</p>
-<button id="{{ instance.app_name }}_remove_button" onclick="call_remove_instance('{{ instance.app_name }}')">Remove</button>
+    <p>Instance is stopped</p>
+
+    {% if perms.main.delete_appinstancemodel %}
+        <button id="{{ instance.app_name }}_remove_button" onclick="call_remove_instance('{{ instance.app_name }}')">Remove</button>
+    {% else %}
+        <button disabled="disabled">Remove</button>
+    {% endif %}
 {% endif %}
 
 <p>Created at {{ instance.created_at }}</p>
 
-<a href="{% url 'edit_instance' instance.app_name %}"><button>Edit</button></a>
+{% if perms.main.change_appinstancemodel %}
+    <a href="{% url 'edit_instance' instance.app_name %}"><button>Edit</button></a>
+{% else %}
+    <button disabled="disabled">Edit</button>
+{% endif %}
 
 {% if destinations %}
 <h3>Can send files to:</h3>
