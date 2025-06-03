@@ -1,7 +1,7 @@
 from django.shortcuts import render, reverse, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.decorators import login_required, permission_required
-from .models import AppInstanceModel, AppConnectionModel
+from .models import AppInstanceModel, AppConnectionModel, OrganizationEntity
 from . import forms
 
 from subprocess import run
@@ -26,13 +26,47 @@ def index(request):
         else:
             stopped_nonexistent.append(instance)
 
+    organizations = OrganizationEntity.objects.all()
+
     context = {
+        "organizations": organizations,
         "running_instances": running_instances,
         "stopped_existing_instances": stopped_but_existing,
         "stopped_nonexistent_instances": stopped_nonexistent
     }
 
     return render(request, "index.html", context)
+
+def view_organization(request, org_name):
+    organization = get_object_or_404(OrganizationEntity, org_name=org_name)
+    connected_apps = AppInstanceModel.objects.filter(owner_org=organization)
+
+    context = {
+        "org": organization,
+        "connected_apps": connected_apps
+    }
+
+    return render(request, "view_organization.html", context)
+
+@login_required
+@permission_required("main.add_organizationentitymodel")
+def create_organization(request):
+    if request.method == "GET":
+        form = forms.OrganizationEntityForm()
+
+        return render(request, "create_organization.html", { "form": form })
+
+    if request.method == "POST":
+        form = forms.OrganizationEntityForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+
+            return HttpResponseRedirect(reverse("index"))
+        else:
+            return render(request, "create_organization.html", { "form": form })
+
+    return HttpResponseRedirect(reverse("index"))
 
 @login_required
 @permission_required("main.add_appinstancemodel")
@@ -57,6 +91,7 @@ def create_app_instance(request):
 
     app_name = form.cleaned_data["app_name"]
     url_path = form.cleaned_data["url_path"]
+    owner_org = form.cleaned_data["owner_org"]
     transmit_destinations = form.cleaned_data["transmit_destinations"]
 
     if (len(url_path) == 0):
@@ -74,7 +109,8 @@ def create_app_instance(request):
 
     datetime_now = datetime.now()
     app_instance = AppInstanceModel(app_name=app_name, url_path=url_path,
-                                           is_running=True, created_at=datetime_now)
+                                    owner_org=owner_org, is_running=True,
+                                    created_at=datetime_now)
     app_instance.save()
 
     # Dashboard will always know which instances can transmit to which.

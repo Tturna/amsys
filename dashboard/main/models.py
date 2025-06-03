@@ -1,8 +1,15 @@
 from django.db import models
 
+class OrganizationEntity(models.Model):
+    org_name = models.CharField(max_length=20, verbose_name="Organization name")
+
+    def __str__(self):
+        return str(self.org_name)
+
 class AppInstanceModel(models.Model):
     app_name = models.CharField(max_length=20, verbose_name="App name")
     url_path = models.CharField(max_length=20, verbose_name="URL path", blank=True, help_text="Leave empty to match app name")
+    owner_org = models.ForeignKey(OrganizationEntity, on_delete=models.CASCADE, verbose_name="Owner organization")
     is_running = models.BooleanField()
     created_at = models.DateTimeField()
 

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block body %}
+    <h1>Provisioner Dashboard</h1>
+    <h2>Create new organization</h2>
+    <form action="{% url 'create_organization' %}" method="POST">
+        {% csrf_token %}
+        {{ form }}
+        <input type="submit" value="Create" />
+    </form>
+{% endblock %}

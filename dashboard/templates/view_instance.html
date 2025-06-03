@@ -1,12 +1,17 @@
 {% extends "base.html" %}
+{% load static %}
 {% block body %}
 
 <h1>Provisioner Dashboard</h1>
 <h2>{{ instance.app_name }}</h2>
+<p>
+    Connected organization:
+    <a href="{% url 'view_organization' instance.owner_org.org_name %}">{{ instance.owner_org.org_name }}</a>
+</p>
 <p>Hosted at <a href="http://localhost/{{ instance.url_path }}">http://localhost/{{ instance.url_path }}</a></p>
 
 {% if instance.is_running %}
-    <p>Instance is running</p>
+    <p>Instance is <span id="{{ instance.app_name }}_status">running</span></p>
 
     {% if perms.main.change_appinstancemodel %}
         <button id="{{ instance.app_name }}_stop_button" onclick="call_stop_instance('{{ instance.app_name }}')">Stop</button>
@@ -14,7 +19,7 @@
         <button disabled="disabled">Stop</button>
     {% endif %}
 {% else %}
-    <p>Instance is stopped</p>
+    <p>Instance is <span id="{{ instance.app_name }}_status">stopped</span></p>
 
     {% if perms.main.delete_appinstancemodel %}
         <button id="{{ instance.app_name }}_remove_button" onclick="call_remove_instance('{{ instance.app_name }}')">Remove</button>
@@ -40,4 +45,5 @@
 <h3>No file share destinations defined</h3>
 {% endif %}
 
+<script src="{% static 'instance_controls.js' %}"></script>
 {% endblock %}

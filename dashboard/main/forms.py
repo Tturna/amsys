@@ -1,12 +1,17 @@
 from django import forms
-from .models import AppInstanceModel
+from .models import OrganizationEntity, AppInstanceModel
+
+class OrganizationEntityForm(forms.ModelForm):
+    class Meta:
+        model = OrganizationEntity
+        fields = "__all__"
 
 class AppInstanceForm(forms.ModelForm):
     transmit_destinations = forms.ModelMultipleChoiceField(queryset=AppInstanceModel.objects.all(), widget=forms.CheckboxSelectMultiple, required=False)
 
     class Meta:
         model = AppInstanceModel
-        fields = [ "app_name", "url_path" ]
+        fields = [ "app_name", "url_path", "owner_org" ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

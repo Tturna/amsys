@@ -3,10 +3,26 @@
 {% block body %}
     <h1>Provisioner Dashboard</h1>
 
-    {% if perms.main.add_appinstancemodel %}
-    <a href="{% url 'create_app_instance' %}"><button>Create new instance</button></a>
+    <h2>Organizations</h2>
+    {% if perms.main.add_organizationentitymodel %}
+    <a href="{% url 'create_organization' %}"><button>Create organization</button></a>
     {% else %}
-    <button disabled="disabled">Create new instance</button>
+    <button disabled="disabled">Create organization</button>
+    {% endif %}
+
+    {% for org in organizations %}
+    <p><a href="{% url 'view_organization' org.org_name %}">{{ org.org_name }}</a></p>
+    {% endfor %}
+
+    <h2>App instances</h2>
+    {% if organizations %}
+        {% if perms.main.add_appinstancemodel %}
+        <a href="{% url 'create_app_instance' %}"><button>Create new instance</button></a>
+        {% else %}
+        <button disabled="disabled">Create new instance</button>
+        {% endif %}
+    {% else %}
+        <button disabled="disabled">Create new instance</button><span style="color: red"> No organizations defined</span>
     {% endif %}
 
     <h2>Running app instances</h2>
@@ -14,6 +30,7 @@
     <p>
     {{ instance.app_name }}
     @<a href="/{{ instance.url_path }}">/{{ instance.url_path }}</a>
+    - {{ instance.owner_org.org_name }}
     - <span id="{{ instance.app_name }}_status">Running</span>
     - {{ instance.created_at }}
     <a href="/view_instance/{{ instance.app_name }}"><button>View</button></a>
@@ -54,5 +71,5 @@
     </p>
     {% endfor %}
 
-    <script src="{% static 'index.js' %}"></script>
+    <script src="{% static 'instance_controls.js' %}"></script>
 {% endblock %}
