@@ -1,75 +1,109 @@
 {% extends "base.html" %}
 {% load static %}
-{% block body %}
-    <h1>Provisioner Dashboard</h1>
+{% block content %}
+<h1>Provisioner Dashboard</h1>
+<hr>
 
-    <h2>Organizations</h2>
-    {% if perms.main.add_organizationentitymodel %}
-    <a href="{% url 'create_organization' %}"><button>Create organization</button></a>
-    {% else %}
-    <button disabled="disabled">Create organization</button>
-    {% endif %}
-
-    {% for org in organizations %}
-    <p><a href="{% url 'view_organization' org.org_name %}">{{ org.org_name }}</a></p>
-    {% endfor %}
-
-    <h2>App instances</h2>
-    {% if organizations %}
-        {% if perms.main.add_appinstancemodel %}
-        <a href="{% url 'create_app_instance' %}"><button>Create new instance</button></a>
+<div class="row">
+    <div class="col">
+        <h2>Organizations</h2>
+        {% if perms.main.add_organizationentitymodel %}
+        <a href="{% url 'create_organization' %}"><button class="btn btn-primary">Create organization</button></a>
         {% else %}
-        <button disabled="disabled">Create new instance</button>
+        <button class="btn btn-primary disabled" disabled="disabled">Create organization</button>
         {% endif %}
-    {% else %}
-        <button disabled="disabled">Create new instance</button><span style="color: red"> No organizations defined</span>
-    {% endif %}
 
-    <h2>Running app instances</h2>
-    {% for instance in running_instances %}
-    <p>
-    {{ instance.app_name }}
-    @<a href="/{{ instance.url_path }}">/{{ instance.url_path }}</a>
-    - {{ instance.owner_org.org_name }}
-    - <span id="{{ instance.app_name }}_status">Running</span>
-    - {{ instance.created_at }}
-    <a href="/view_instance/{{ instance.app_name }}"><button>View</button></a>
-    {% if perms.main.change_appinstancemodel %}
-    <button id="{{ instance.app_name }}_stop_button" onclick="call_stop_instance('{{ instance.app_name }}')">Stop</button>
-    {% else %}
-    <button disabled="disabled">Stop</button>
-    {% endif %}
-    </p>
-    {% endfor %}
+        <h3 class="mt-5">Created organizations</h3>
+        {% for org in organizations %}
+        <p><a class="btn btn-sm btn-success" href="{% url 'view_organization' org.org_name %}">{{ org.org_name }}</a></p>
+        {% endfor %}
 
-    <h2>Stopped app instances</h2>
-    {% for instance in stopped_existing_instances %}
-    <p>
-    {{ instance.app_name }}
-    @/{{ instance.url_path }}
-    - Stopped
-    - {{ instance.created_at }}</p>
-    {% endfor %}
+    </div>
+    <div class="col">
+        <h2>App instances</h2>
+        {% if organizations %}
+            {% if perms.main.add_appinstancemodel %}
+            <a href="{% url 'create_app_instance' %}"><button class="btn btn-primary">Create new instance</button></a>
+            {% else %}
+            <button class="btn btn-primary disabled" disabled="disabled">Create new instance</button>
+            {% endif %}
+        {% else %}
+            <button class="btn btn-primary disabled" disabled="disabled">Create new instance</button><span style="color: red"> No organizations defined</span>
+        {% endif %}
 
-    <h2>Missing instances</h2>
+        <h3 class="mt-5">Running app instances</h3>
+        {% for instance in running_instances %}
+        <div class="card my-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-8">
+                        <h4 class="card-title text-light">{{ instance.app_name }}<span class="badge bg-secondary mx-3" id="{{ instance.app_name }}_status">Running</span></h4>
+                        <p class="card-text text-body-secondary">{{ instance.owner_org.org_name }} 
+                        - <a class="card-link" href="/{{ instance.url_path }}">/{{ instance.url_path }}</a></p>
+                        <a href="/view_instance/{{ instance.app_name }}"><button class="btn btn-sm btn-success">View</button></a>
+                        {% if perms.main.change_appinstancemodel %}
+                        <button class="btn btn-sm btn-outline-danger" id="{{ instance.app_name }}_stop_button" onclick="call_stop_instance('{{ instance.app_name }}')">Stop</button>
+                        {% else %}
+                        <button class="btn btn-sm btn-outline-danger disabled" disabled="disabled">Stop</button>
+                        {% endif %}
+                    </div>
+                    <div class="col-4">
+                        <p class="card-text text-end">Created: {{ instance.created_at }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
 
-    {% if stopped_nonexistent_instances %}
-        <h3>These instances have been stopped and can't be found by Docker</h3>
-    {% endif %}
+        <h3 class="mt-5">Stopped app instances</h3>
+        {% for instance in stopped_existing_instances %}
+        <div class="card my-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-8">
+                        <h4 class="card-title text-light">{{ instance.app_name }}<span class="badge bg-secondary mx-3" id="{{ instance.app_name }}_status">Stopped</span></h4>
+                        <p class="card-text text-body-secondary">{{ instance.owner_org.org_name }} 
+                        - <a class="card-link" href="/{{ instance.url_path }}">/{{ instance.url_path }}</a></p>
+                        <a href="/view_instance/{{ instance.app_name }}"><button class="btn btn-sm btn-success">View</button></a>
+                    </div>
+                    <div class="col-4">
+                        <p class="card-text text-end">Created: {{ instance.created_at }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
 
-    {% for instance in stopped_nonexistent_instances %}
-    <p>
-    {{ instance.app_name }}
-    @/{{ instance.url_path }}
-    - Stopped
-    - {{ instance.created_at }}
-    {% if perms.main.delete_appinstancemodel %}
-    <button id="{{ instance.app_name }}_remove_button" onclick="call_remove_instance('{{ instance.app_name }}')">Remove</button>
-    {% else %}
-    <button disabled="disabled">Remove</button>
-    {% endif %}
-    </p>
-    {% endfor %}
+        <h3 class="mt-5">Missing instances</h3>
 
-    <script src="{% static 'instance_controls.js' %}"></script>
+        {% if stopped_nonexistent_instances %}
+            <p class="text-body-secondary">These instances have been stopped and can't be found by Docker</p>
+        {% endif %}
+
+        {% for instance in stopped_nonexistent_instances %}
+        <div class="card my-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-8">
+                        <h4 class="card-title text-light">{{ instance.app_name }}<span class="badge bg-secondary mx-3" id="{{ instance.app_name }}_status">Missing</span></h4>
+                        <p class="card-text text-body-secondary">{{ instance.owner_org.org_name }} 
+                        - <a class="card-link" href="/{{ instance.url_path }}">/{{ instance.url_path }}</a></p>
+                        <a href="/view_instance/{{ instance.app_name }}"><button class="btn btn-sm btn-success">View</button></a>
+                        {% if perms.main.change_appinstancemodel %}
+                        <button class="btn btn-sm btn-outline-danger" id="{{ instance.app_name }}_remove_button" onclick="call_remove_instance('{{ instance.app_name }}')">Remove</button>
+                        {% else %}
+                        <button class="btn btn-sm btn-outline-danger disabled" disabled="disabled">Remove</button>
+                        {% endif %}
+                    </div>
+                    <div class="col-4">
+                        <p class="card-text text-end">Created: {{ instance.created_at }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script src="{% static 'instance_controls.js' %}"></script>
 {% endblock %}

@@ -24,6 +24,6 @@ function call_stop_instance(app_name) {
 function call_remove_instance(app_name) {
     fetch(`/remove_instance/${app_name}`)
     .then(response => {
-        window.location = "/index";
+        window.location = "/";
     });
 }

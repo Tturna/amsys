@@ -8,27 +8,32 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Provisioner Dashboard</title>
     <link rel="stylesheet" href="{% static 'style.css' %}">
+    {% load bootstrap5 %}
+    {% bootstrap_css %}
+    {% bootstrap_javascript %}
   </head>
   <body>
       <nav>
-          <ul>
-              <li><a href="{% url 'index' %}">Instances</a></li>
+          <ul class="nav">
+              <li><a class="nav-link" href="{% url 'index' %}">Instances</a></li>
               {% if request.user.is_authenticated %}
               <li>
                   <form method="POST" action="{% url 'logout' %}">
                       {% csrf_token %}
-                      <input type="submit" value="Logout">
+                      <input class="nav-link" type="submit" value="Logout">
                   </form>
               </li>
               <li>
-                  <p>Welcome {{ user.username }}</p>
+                  <p class="nav-link disabled">Welcome {{ user.username }}</p>
               </li>
               {% else %}
-              <li><a href="{% url 'login' %}">Login</a></li>
+              <li><a class="nav-link" href="{% url 'login' %}">Login</a></li>
               {% endif %}
           </ul>
       </nav>
-      {% block body %}
+      <div class="container">
+      {% block content %}
       {% endblock %}
+      </div>
   </body>
 </html>
