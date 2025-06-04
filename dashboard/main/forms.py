@@ -7,7 +7,10 @@ class OrganizationEntityForm(forms.ModelForm):
         fields = "__all__"
 
 class AppInstanceForm(forms.ModelForm):
-    transmit_destinations = forms.ModelMultipleChoiceField(queryset=AppInstanceModel.objects.all(), widget=forms.CheckboxSelectMultiple, required=False)
+    transmit_destinations = forms.ModelMultipleChoiceField(
+            queryset=AppInstanceModel.objects.all(),
+            widget=forms.CheckboxSelectMultiple,
+            required=False)
 
     class Meta:
         model = AppInstanceModel
