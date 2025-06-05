@@ -1,5 +1,5 @@
 from django.shortcuts import render, reverse, get_object_or_404
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, JsonResponse
 from django.contrib.auth.decorators import login_required, permission_required
 from .models import AppInstanceModel, AppConnectionModel, OrganizationEntity
 from . import forms
@@ -196,3 +196,58 @@ def edit_instance(request, app_name):
             return HttpResponseRedirect(reverse("edit_instance", args=[instance.app_name]))
     else:
         return HttpResponseRedirect(reverse("index"))
+
+def existing_instances(request):
+    if (request.method != "GET"):
+        return HttpResponseNotAllowed(["GET"])
+
+    running_instances = AppInstanceModel.objects.filter(is_running=True)
+    stopped_instances = AppInstanceModel.objects.filter(is_running=False)
+
+    name_fetch_result = run(["docker", "container", "ls", "-a", "--format='{{json .Names}}'"], capture_output=True, text=True)
+    existing_containers_string = name_fetch_result.stdout
+    existing_containers_string = existing_containers_string.replace("\"", "")
+    existing_containers_string = existing_containers_string.replace("\'", "")
+    existing_containers = existing_containers_string.split("\n")
+
+    stopped_but_existing = []
+
+    for instance in stopped_instances:
+        if instance.app_name in existing_containers:
+            stopped_but_existing.append({ "id": instance.pk, "name": instance.app_name })
+        else:
+            pass
+
+    instances = [{ "id": x.pk, "name": x.app_name } for x in running_instances]
+    instances.extend(stopped_but_existing)
+
+    data = {
+        "instances": instances
+    }
+
+    return JsonResponse(data=data)
+
+def instance_info(request, id):
+    if (request.method != "GET"):
+        return HttpResponseNotAllowed(["GET"])
+
+    instance = AppInstanceModel.objects.get(pk=id)
+
+    if not instance:
+        return JsonResponse({ "error": "Not found" })
+
+    destinations_raw = AppConnectionModel.objects.filter(instance_from=instance)
+    destinations = [{ "id": x.instance_to.pk, "app_name": x.instance_to.app_name } for x in destinations_raw]
+
+    data = {
+        "id": instance.pk,
+        "app_name": instance.app_name,
+        "url_path": instance.url_path,
+        "owner_org": {
+            "id": instance.owner_org.pk,
+            "org_name": instance.owner_org.org_name
+        },
+        "transmit_destinations": destinations
+    }
+
+    return JsonResponse(data=data)
