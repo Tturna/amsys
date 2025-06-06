@@ -12,6 +12,7 @@ class AppInstanceModel(models.Model):
     owner_org = models.ForeignKey(OrganizationEntity, on_delete=models.CASCADE, verbose_name="Owner organization")
     is_running = models.BooleanField()
     created_at = models.DateTimeField()
+    api_token = models.CharField(max_length=20)
 
     def __str__(self):
         return str(self.app_name)

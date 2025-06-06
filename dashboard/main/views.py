@@ -1,11 +1,12 @@
 from django.shortcuts import render, reverse, get_object_or_404
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, JsonResponse
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, HttpResponseForbidden, JsonResponse
 from django.contrib.auth.decorators import login_required, permission_required
 from .models import AppInstanceModel, AppConnectionModel, OrganizationEntity
 from . import forms
 
 from subprocess import run
 from datetime import datetime
+import secrets
 
 def index(request):
     running_instances = AppInstanceModel.objects.filter(is_running=True)
@@ -108,9 +109,11 @@ def create_app_instance(request):
         url_path = url_path[:-1]
 
     datetime_now = datetime.now()
+    api_token = secrets.token_urlsafe(16)
+
     app_instance = AppInstanceModel(app_name=app_name, url_path=url_path,
                                     owner_org=owner_org, is_running=True,
-                                    created_at=datetime_now)
+                                    created_at=datetime_now, api_token=api_token)
     app_instance.save()
 
     # Dashboard will always know which instances can transmit to which.
@@ -119,7 +122,7 @@ def create_app_instance(request):
         connection = AppConnectionModel(instance_from=app_instance, instance_to=dest)
         connection.save()
 
-    run(["./start-instance.sh", app_name, url_path])
+    run(["./start-instance.sh", app_name, url_path, str(app_instance.pk), api_token])
 
     return HttpResponseRedirect(reverse("index"))
 
@@ -197,9 +200,28 @@ def edit_instance(request, app_name):
     else:
         return HttpResponseRedirect(reverse("index"))
 
-def existing_instances(request):
+# Web API for instances to use
+def existing_instances(request, id):
     if (request.method != "GET"):
         return HttpResponseNotAllowed(["GET"])
+
+    request_api_token = request.headers.get("X-API-Token")
+
+    if not request_api_token:
+        return HttpResponseForbidden()
+
+    request_instance_queryset = AppInstanceModel.objects.filter(pk=id)
+
+    if len(request_instance_queryset) != 1:
+        return HttpResponseForbidden()
+
+    request_instance = request_instance_queryset[0]
+
+    if not request_instance:
+        return HttpResponseForbidden()
+
+    if request_instance.api_token != request_api_token:
+        return HttpResponseForbidden()
 
     running_instances = AppInstanceModel.objects.filter(is_running=True)
     stopped_instances = AppInstanceModel.objects.filter(is_running=False)
@@ -231,21 +253,37 @@ def instance_info(request, id):
     if (request.method != "GET"):
         return HttpResponseNotAllowed(["GET"])
 
-    instance = AppInstanceModel.objects.get(pk=id)
+    request_api_token = request.headers.get("X-API-Token")
 
-    if not instance:
+    if not request_api_token:
+        return HttpResponseForbidden()
+
+    request_instance_queryset = AppInstanceModel.objects.filter(pk=id)
+
+    if len(request_instance_queryset) != 1:
+        return HttpResponseForbidden()
+
+    request_instance = request_instance_queryset[0]
+
+    if not request_instance:
+        return HttpResponseForbidden()
+
+    if request_instance.api_token != request_api_token:
+        return HttpResponseForbidden()
+
+    if not request_instance:
         return JsonResponse({ "error": "Not found" })
 
-    destinations_raw = AppConnectionModel.objects.filter(instance_from=instance)
+    destinations_raw = AppConnectionModel.objects.filter(instance_from=request_instance)
     destinations = [{ "id": x.instance_to.pk, "app_name": x.instance_to.app_name } for x in destinations_raw]
 
     data = {
-        "id": instance.pk,
-        "app_name": instance.app_name,
-        "url_path": instance.url_path,
+        "id": request_instance.pk,
+        "app_name": request_instance.app_name,
+        "url_path": request_instance.url_path,
         "owner_org": {
-            "id": instance.owner_org.pk,
-            "org_name": instance.owner_org.org_name
+            "id": request_instance.owner_org.pk,
+            "org_name": request_instance.owner_org.org_name
         },
         "transmit_destinations": destinations
     }
