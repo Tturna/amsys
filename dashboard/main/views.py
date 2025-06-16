@@ -1,12 +1,16 @@
 from django.shortcuts import render, reverse, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, HttpResponseForbidden, JsonResponse
 from django.contrib.auth.decorators import login_required, permission_required
+from django.views.decorators.csrf import csrf_exempt
 from .models import AppInstanceModel, AppConnectionModel, OrganizationEntity
 from . import forms
 
 from subprocess import run
 from datetime import datetime
 import secrets
+import tempfile
+import json
+import os
 
 def index(request):
     running_instances = AppInstanceModel.objects.filter(is_running=True)
@@ -93,6 +97,7 @@ def create_app_instance(request):
     app_name = form.cleaned_data["app_name"]
     url_path = form.cleaned_data["url_path"]
     owner_org = form.cleaned_data["owner_org"]
+    app_title = form.cleaned_data["app_title"]
     transmit_destinations = form.cleaned_data["transmit_destinations"]
 
     if (len(url_path) == 0):
@@ -114,6 +119,22 @@ def create_app_instance(request):
     app_instance = AppInstanceModel(app_name=app_name, url_path=url_path,
                                     owner_org=owner_org, is_running=True,
                                     created_at=datetime_now, api_token=api_token)
+
+    create_result = run([
+        "./scripts/create-instance.sh",
+        app_name,
+        url_path,
+        app_title,
+        api_token,
+        str(app_instance.pk)
+    ], capture_output=True, text=True)
+
+    if (create_result.returncode != 0):
+        print(create_result.stdout)
+        app_instance.delete()
+        # TODO: error msg
+        return HttpResponseRedirect(reverse("index"))
+
     app_instance.save()
 
     # Dashboard will always know which instances can transmit to which.
@@ -122,8 +143,6 @@ def create_app_instance(request):
         connection = AppConnectionModel(instance_from=app_instance, instance_to=dest)
         connection.save()
 
-    run(["./start-instance.sh", app_name, url_path, str(app_instance.pk), api_token])
-
     return HttpResponseRedirect(reverse("index"))
 
 @login_required
@@ -131,7 +150,13 @@ def create_app_instance(request):
 def stop_instance(request, app_name):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
 
-    run(["./stop-instance.sh", app_name])
+    stop_result = run(["./scripts/stop-instance.sh", app_name], capture_output=True, text=True)
+
+    if (stop_result.returncode != 0):
+        # TODO: Add error message with the message framework
+        print(stop_result.stdout)
+        return HttpResponseRedirect(reverse("index"))
+
     instance.is_running = False
     instance.save()
 
@@ -140,6 +165,13 @@ def stop_instance(request, app_name):
 @login_required
 @permission_required("main.delete_appinstancemodel")
 def remove_instance(request, app_name):
+    remove_result = run(["./scripts/destroy-instance.sh", app_name], capture_output=True, text=True)
+
+    if (remove_result.returncode != 0):
+        # TODO: error msg
+        print(remove_result.stdout)
+        return HttpResponseRedirect(reverse("index"))
+
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
     instance.delete()
 
@@ -249,6 +281,38 @@ def existing_instances(request, id):
 
     return JsonResponse(data=data)
 
+def available_destinations(request, id):
+    if (request.method != "GET"):
+        return HttpResponseNotAllowed(["GET"])
+
+    request_api_token = request.headers.get("X-API-Token")
+
+    if not request_api_token:
+        return HttpResponseForbidden()
+
+    request_instance_queryset = AppInstanceModel.objects.filter(pk=id)
+
+    if len(request_instance_queryset) != 1:
+        return HttpResponseForbidden()
+
+    request_instance = request_instance_queryset[0]
+
+    if not request_instance:
+        return HttpResponseForbidden()
+
+    if request_instance.api_token != request_api_token:
+        return HttpResponseForbidden()
+
+    destinations_raw = AppConnectionModel.objects.filter(instance_from=request_instance)
+    destinations_available = destinations_raw.filter(instance_to__is_running=True)
+    destinations = [{ "id": x.instance_to.pk, "app_name": x.instance_to.app_name } for x in destinations_available]
+
+    data = {
+        "available_destinations": destinations
+    }
+
+    return JsonResponse(data=data)
+
 def instance_info(request, id):
     if (request.method != "GET"):
         return HttpResponseNotAllowed(["GET"])
@@ -271,9 +335,6 @@ def instance_info(request, id):
     if request_instance.api_token != request_api_token:
         return HttpResponseForbidden()
 
-    if not request_instance:
-        return JsonResponse({ "error": "Not found" })
-
     destinations_raw = AppConnectionModel.objects.filter(instance_from=request_instance)
     destinations = [{ "id": x.instance_to.pk, "app_name": x.instance_to.app_name } for x in destinations_raw]
 
@@ -281,11 +342,69 @@ def instance_info(request, id):
         "id": request_instance.pk,
         "app_name": request_instance.app_name,
         "url_path": request_instance.url_path,
+        "app_title": request_instance.app_title,
         "owner_org": {
             "id": request_instance.owner_org.pk,
             "org_name": request_instance.owner_org.org_name
         },
         "transmit_destinations": destinations
     }
+
+    return JsonResponse(data=data)
+
+@csrf_exempt
+def get_ssh_certificate(request, id):
+    if (request.method != "POST"):
+        return HttpResponseNotAllowed(["POST"])
+
+    request_api_token = request.headers.get("X-API-Token")
+
+    if not request_api_token:
+        return HttpResponseForbidden()
+
+    request_instance_queryset = AppInstanceModel.objects.filter(pk=id)
+
+    if len(request_instance_queryset) != 1:
+        return HttpResponseForbidden()
+
+    request_instance = request_instance_queryset[0]
+
+    if not request_instance:
+        return HttpResponseForbidden()
+
+    if request_instance.api_token != request_api_token:
+        return HttpResponseForbidden()
+
+    data = json.loads(request.body)
+    public_key = data.get("public_key")
+
+    if not public_key or len(public_key) == 0:
+        return HttpResponseForbidden()
+
+    with tempfile.NamedTemporaryFile(mode='w+', delete=True) as pk_file:
+        pk_file.write(public_key)
+        pk_file.flush()
+
+        instance_ca_path = "./ssh/instance_ca"
+
+        run([
+            "ssh-keygen",
+            "-s", instance_ca_path,
+            "-I", id,
+            "-n", "remote",
+            "-V", "+5m",
+            pk_file.name
+        ], check=True)
+
+        cert_name = pk_file.name + "-cert.pub"
+        cert = ""
+
+        with open(cert_name, "r") as cert_file:
+            cert = cert_file.read()
+
+        if os.path.exists(cert_name):
+            os.remove(cert_name)
+
+    data = { "certificate": cert }
 
     return JsonResponse(data=data)

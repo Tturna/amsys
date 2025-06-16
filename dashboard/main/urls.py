@@ -17,5 +17,7 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(template_name="index.html", next_page="/login/"), name="logout"),
     path("api/existing_instances/<id>/", views.existing_instances, name="existing_instances"),
     path("api/instance_info/<id>/", views.instance_info, name="instance_info"),
+    path("api/get_ssh_certificate/<id>/", views.get_ssh_certificate, name="get_ssh_certificate"),
+    path("api/available_destinations/<id>/", views.available_destinations, name="available_destinations"),
     path("admin/", admin.site.urls)
 ]

@@ -1,0 +1,16 @@
+{
+  "title": "FDF ADDMAN TEST 1",
+  "db_id": "addmantest1",
+  "sftp_destinations": [
+    {
+      "name": "ADDMAN TEST 2",
+      "host": "addman-test2",
+      "username": "remote",
+      "password": "remote",
+      "port": 22,
+      "receive_dir": "/addman/3D-Repository/mailbox/receive",
+      "received_item_suffix": "addmantest2"
+    }
+  ],
+  "uid_counter": "1054"
+}

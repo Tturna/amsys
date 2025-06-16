@@ -14,7 +14,7 @@ class AppInstanceForm(forms.ModelForm):
 
     class Meta:
         model = AppInstanceModel
-        fields = [ "app_name", "url_path", "owner_org" ]
+        fields = [ "app_name", "url_path", "app_title", "owner_org" ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -23,7 +23,7 @@ class AppInstanceForm(forms.ModelForm):
         if (instance_arg):
             self.instance = instance_arg
 
-        self.uneditable_fields = ["app_name", "url_path"]
+        self.uneditable_fields = ["app_name", "url_path", "app_title"]
 
         # If form is created from an existing model (editing form)
         if self.instance and self.instance.pk:
