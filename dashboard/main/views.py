@@ -232,6 +232,9 @@ def edit_instance(request, app_name):
     else:
         return HttpResponseRedirect(reverse("index"))
 
+def map(request):
+    return render(request, "map.html")
+
 # Web API for instances to use
 def existing_instances(request, id):
     if (request.method != "GET"):

@@ -2,6 +2,8 @@ from django.db import models
 
 class OrganizationEntity(models.Model):
     org_name = models.CharField(max_length=20, verbose_name="Organization name")
+    latitude = models.DecimalField(max_digits=20, decimal_places=16)
+    longitude = models.DecimalField(max_digits=20, decimal_places=16)
 
     def __str__(self):
         return str(self.org_name)

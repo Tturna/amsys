@@ -4,13 +4,14 @@ set -e
 
 APP_NAME=$1
 URL_PATH=$2
-APP_ID=$3
+APP_TITLE=$3
 API_TOKEN=$4
+APP_ID=$5
 
 echo "App ID: $APP_ID"
 echo "API Token: $API_TOKEN"
 
-docker run --rm -d --network path-deployments-net \
+docker run -d --network path-deployments-net \
     --name $APP_NAME \
     -e DJANGO_URL_PATH=$URL_PATH \
     -e API_TOKEN=$API_TOKEN \
