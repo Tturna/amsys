@@ -10,7 +10,3 @@ Effectively a user should be able to shut down an instance for like a day or two
 then bring it back up.
 
 Link to Traefik dashboard.
-
-Let a user pick an organization's location from a map.
-
-Show organizations on a map.
