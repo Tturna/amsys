@@ -1,4 +1,8 @@
 function call_stop_instance(app_name) {
+    if (!confirm(`Are you sure you want to stop instance "${app_name}"?`)) {
+        return;
+    }
+
     let status_span = document.getElementById(`${app_name}_status`);
 
     if (status_span) {
@@ -21,7 +25,30 @@ function call_stop_instance(app_name) {
     });
 }
 
+function call_start_instance(app_name) {
+    let status_span = document.getElementById(`${app_name}_status`);
+
+    if (status_span) {
+        status_span.innerText = "Starting...";
+    }
+
+    let start_button = document.getElementById(`${app_name}_start_button`);
+
+    if (start_button) {
+        start_button.disabled = true;
+    }
+
+    fetch(`/start_instance/${app_name}`)
+    .then(response => {
+        window.location = "/";
+    });
+}
+
 function call_remove_instance(app_name) {
+    if (!confirm(`Are you sure you want to permanently remove instance "${app_name}"? This can not be undone.`)) {
+        return;
+    }
+
     fetch(`/remove_instance/${app_name}`)
     .then(response => {
         window.location = "/";

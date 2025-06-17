@@ -37,10 +37,11 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-8">
-                        <h4 class="card-title text-light">{{ instance.app_name }}<span class="badge bg-secondary mx-3" id="{{ instance.app_name }}_status">Running</span></h4>
+                        <h4 class="card-title">{{ instance.app_name }}<span class="badge bg-secondary mx-3" id="{{ instance.app_name }}_status">Running</span></h4>
                         <p class="card-text text-body-secondary">{{ instance.owner_org.org_name }} 
                         - <a class="card-link" href="/{{ instance.url_path }}">/{{ instance.url_path }}</a></p>
                         <a href="/view_instance/{{ instance.app_name }}"><button class="btn btn-sm btn-success">View</button></a>
+
                         {% if perms.main.change_appinstancemodel %}
                         <button class="btn btn-sm btn-outline-danger" id="{{ instance.app_name }}_stop_button" onclick="call_stop_instance('{{ instance.app_name }}')">Stop</button>
                         {% else %}
@@ -61,10 +62,22 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-8">
-                        <h4 class="card-title text-light">{{ instance.app_name }}<span class="badge bg-secondary mx-3" id="{{ instance.app_name }}_status">Stopped</span></h4>
+                        <h4 class="card-title">{{ instance.app_name }}<span class="badge bg-secondary mx-3" id="{{ instance.app_name }}_status">Stopped</span></h4>
                         <p class="card-text text-body-secondary">{{ instance.owner_org.org_name }} 
                         - <a class="card-link" href="/{{ instance.url_path }}">/{{ instance.url_path }}</a></p>
                         <a href="/view_instance/{{ instance.app_name }}"><button class="btn btn-sm btn-success">View</button></a>
+
+                        {% if perms.main.change_appinstancemodel %}
+                        <button class="btn btn-sm btn-secondary" id="{{ instance.app_name }}_start_button" onclick="call_start_instance('{{ instance.app_name }}')">Start</button>
+                        {% else %}
+                        <button class="btn btn-sm btn-secondary disabled" disabled="disabled">Start</button>
+                        {% endif %}
+
+                        {% if perms.main.delete_appinstancemodel %}
+                        <button class="btn btn-sm btn-outline-danger" id="{{ instance.app_name }}_remove_button" onclick="call_remove_instance('{{ instance.app_name }}')">Remove</button>
+                        {% else %}
+                        <button class="btn btn-sm btn-outline-danger disabled" disabled="disabled">Remove</button>
+                        {% endif %}
                     </div>
                     <div class="col-4">
                         <p class="card-text text-end">Created: {{ instance.created_at }}</p>
@@ -85,11 +98,12 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-8">
-                        <h4 class="card-title text-light">{{ instance.app_name }}<span class="badge bg-secondary mx-3" id="{{ instance.app_name }}_status">Missing</span></h4>
+                        <h4 class="card-title">{{ instance.app_name }}<span class="badge bg-secondary mx-3" id="{{ instance.app_name }}_status">Missing</span></h4>
                         <p class="card-text text-body-secondary">{{ instance.owner_org.org_name }} 
                         - <a class="card-link" href="/{{ instance.url_path }}">/{{ instance.url_path }}</a></p>
                         <a href="/view_instance/{{ instance.app_name }}"><button class="btn btn-sm btn-success">View</button></a>
-                        {% if perms.main.change_appinstancemodel %}
+
+                        {% if perms.main.delete_appinstancemodel %}
                         <button class="btn btn-sm btn-outline-danger" id="{{ instance.app_name }}_remove_button" onclick="call_remove_instance('{{ instance.app_name }}')">Remove</button>
                         {% else %}
                         <button class="btn btn-sm btn-outline-danger disabled" disabled="disabled">Remove</button>

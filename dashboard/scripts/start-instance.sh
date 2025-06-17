@@ -1,6 +1,8 @@
 #!/bin/bash
 # This script is designed to be executed automatically
 
+set -e
+
 APP_NAME=$1
 
 if [ -z $APP_NAME ]; then

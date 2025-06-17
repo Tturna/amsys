@@ -119,6 +119,7 @@ def create_app_instance(request):
     app_instance = AppInstanceModel(app_name=app_name, url_path=url_path,
                                     owner_org=owner_org, is_running=True,
                                     created_at=datetime_now, api_token=api_token)
+    app_instance.save()
 
     create_result = run([
         "./scripts/create-instance.sh",
@@ -158,6 +159,24 @@ def stop_instance(request, app_name):
         return HttpResponseRedirect(reverse("index"))
 
     instance.is_running = False
+    instance.save()
+
+    return HttpResponse(status=204)
+
+@login_required
+@permission_required("main.change_appinstancemodel")
+def start_instance(request, app_name):
+    instance = get_object_or_404(AppInstanceModel, app_name=app_name)
+
+    print(f"starting instance: {app_name}")
+    start_result = run(["./scripts/start-instance.sh", app_name], capture_output=True, text=True)
+
+    if (start_result.returncode != 0):
+        # TODO: Add error message with the message framework
+        print(start_result.stdout)
+        return HttpResponseRedirect(reverse("index"))
+
+    instance.is_running = True
     instance.save()
 
     return HttpResponse(status=204)
