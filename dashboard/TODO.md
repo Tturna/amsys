@@ -1,6 +1,5 @@
 # TODO
 
-Link to Traefik dashboard.
-Show if Traefik is running or not.
+Message framework.
 
 App name validation in instance creation form.

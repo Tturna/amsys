@@ -33,11 +33,20 @@ def index(request):
 
     organizations = OrganizationEntity.objects.all()
 
+    proxy_fetch_result = run(["docker", "container", "ls", "--format='{{json .Names}}'"], capture_output=True, text=True)
+    proxy_fetch_string = proxy_fetch_result.stdout
+    proxy_fetch_string = proxy_fetch_string.replace("\"", "")
+    proxy_fetch_string = proxy_fetch_string.replace("\'", "")
+    running_containers = proxy_fetch_string.split("\n")
+
+    is_proxy_running = "amsys-traefik" in running_containers
+
     context = {
         "organizations": organizations,
         "running_instances": running_instances,
         "stopped_existing_instances": stopped_but_existing,
-        "stopped_nonexistent_instances": stopped_nonexistent
+        "stopped_nonexistent_instances": stopped_nonexistent,
+        "is_proxy_running": is_proxy_running
     }
 
     return render(request, "index.html", context)
@@ -168,7 +177,6 @@ def stop_instance(request, app_name):
 def start_instance(request, app_name):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
 
-    print(f"starting instance: {app_name}")
     start_result = run(["./scripts/start-instance.sh", app_name], capture_output=True, text=True)
 
     if (start_result.returncode != 0):
@@ -260,6 +268,45 @@ def map(request):
     }
 
     return render(request, "map.html", context)
+
+def proxy(request):
+    proxy_fetch_result = run(["docker", "container", "ls", "--format='{{json .Names}}'"], capture_output=True, text=True)
+    proxy_fetch_string = proxy_fetch_result.stdout
+    proxy_fetch_string = proxy_fetch_string.replace("\"", "")
+    proxy_fetch_string = proxy_fetch_string.replace("\'", "")
+    running_containers = proxy_fetch_string.split("\n")
+
+    is_proxy_running = "amsys-traefik" in running_containers
+
+    context = {
+        "is_proxy_running": is_proxy_running
+    }
+
+    return render(request, "proxy.html", context)
+
+@login_required
+@permission_required("main.change_appinstancemodel")
+def start_proxy(request):
+    start_result = run(["./scripts/start-proxy.sh"], capture_output=True, text=True)
+
+    print(start_result.stdout)
+    if (start_result.returncode != 0):
+        # TODO: Add error message with the message framework
+        return HttpResponseRedirect(reverse("index"))
+
+    return HttpResponse(status=204)
+
+@login_required
+@permission_required("main.change_appinstancemodel")
+def stop_proxy(request):
+    stop_result = run(["./scripts/stop-proxy.sh"], capture_output=True, text=True)
+
+    if (stop_result.returncode != 0):
+        # TODO: Add error message with the message framework
+        print(stop_result.stdout)
+        return HttpResponseRedirect(reverse("index"))
+
+    return HttpResponse(status=204)
 
 # Web API for instances to use
 def existing_instances(request, id):

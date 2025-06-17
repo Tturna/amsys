@@ -1,7 +1,15 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
+
+<div class="d-flex justify-content-between">
 <h1>Provisioner Dashboard</h1>
+{% if is_proxy_running %}
+<h2><span class="badge bg-success mx-5">Proxy active</span></h2>
+{% else %}
+<h2><span class="badge bg-danger mx-5">Proxy inactive</span></h2>
+{% endif %}
+</div>
 <hr>
 
 <div class="row">
@@ -21,6 +29,14 @@
     </div>
     <div class="col">
         <h2>App instances</h2>
+
+        {% if not is_proxy_running %}
+        <div class="alert alert-danger" role="alert">
+            The Traefik proxy is not running! Access to app instances is limited.
+            <a class="btn btn-sm btn-secondary" href="{% url 'proxy' %}">Manage proxy</a>
+        </div>
+        {% endif %}
+
         {% if organizations %}
             {% if perms.main.add_appinstancemodel %}
             <a href="{% url 'create_app_instance' %}"><button class="btn btn-primary">Create new instance</button></a>

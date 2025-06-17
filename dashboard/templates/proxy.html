@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex justify-content-between">
+<h1>Provisioner Dashboard</h1>
+{% if is_proxy_running %}
+<h2><span class="badge bg-success mx-5" id="proxy_status">Proxy active</span></h2>
+{% else %}
+<h2><span class="badge bg-danger mx-5" id="proxy_status">Proxy inactive</span></h2>
+{% endif %}
+</div>
+<hr>
+
+<div class="row">
+    <div class="col">
+        <h2>Traefik proxy</h2>
+
+        {% if is_proxy_running %}
+        <a class="btn btn-primary" href="{{ AMSYS_TRAEFIK_URL }}" target="_blank">Traefik dashboard</a>
+        <button class="btn btn-outline-danger" id="proxy-stop-button" onclick="call_stop_proxy()">Stop proxy</button>
+        {% else %}
+        <div class="alert alert-danger" role="alert">
+            The Traefik proxy is not running! Access to app instances is limited. The Traefik dashboard is unavailable.
+        </div>
+
+        <a class="btn btn-primary disabled" disabled="disabled" href="#">Traefik dashboard</a>
+        <button class="btn btn-success" id="proxy-start-button" onclick="call_start_proxy()">Start proxy</button>
+        {% endif %}
+
+    </div>
+</div>
+
+<script src="{% static 'proxy_controls.js' %}"></script>
+{% endblock %}
