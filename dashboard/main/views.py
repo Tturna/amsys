@@ -233,7 +233,14 @@ def edit_instance(request, app_name):
         return HttpResponseRedirect(reverse("index"))
 
 def map(request):
-    return render(request, "map.html")
+    orgs = OrganizationEntity.objects.all().values("org_name", "latitude", "longitude")
+    orgs_data = json.dumps(list(orgs), default=str)
+
+    context = {
+        "orgs": orgs_data
+    }
+
+    return render(request, "map.html", context)
 
 # Web API for instances to use
 def existing_instances(request, id):

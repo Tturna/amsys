@@ -4,6 +4,9 @@
 <h1>Provisioner Dashboard</h1>
 <h2>{{ org.org_name }}</h2>
 
+<strong>Location</strong>
+<p>{{ org.latitude }}, {{ org.longitude }}</p>
+
 {% if connected_apps %}
 <h3>Connected app instances</h3>
 {% else %}

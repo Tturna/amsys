@@ -17,5 +17,12 @@
 
 <div id="map" style="width: 800px; height: 500px;"></div>
 
+{% comment %}
+The script element below just exists so that data from the backend can
+be used in frontend JS.
+{% endcomment %} 
+<script>
+    const orgs = {{ orgs|safe }};
+</script>
 <script src="{% static 'map.js' %}"></script>
 {% endblock %}

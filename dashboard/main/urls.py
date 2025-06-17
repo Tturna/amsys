@@ -13,7 +13,7 @@ urlpatterns = [
     path("remove_instance/<app_name>/", views.remove_instance, name="remove_instance"),
     path("view_instance/<app_name>/", views.view_instance, name="view_instance"),
     path("edit_instance/<app_name>/", views.edit_instance, name="edit_instance"),
-    path("map", views.map, name="map"),
+    path("map/", views.map, name="map"),
     path("login/", auth_views.LoginView.as_view(template_name="login.html", next_page="/"), name="login"),
     path("logout/", auth_views.LogoutView.as_view(template_name="index.html", next_page="/login/"), name="logout"),
     path("api/existing_instances/<id>/", views.existing_instances, name="existing_instances"),
