@@ -12,9 +12,11 @@ class AppInstanceForm(forms.ModelForm):
             widget=forms.CheckboxSelectMultiple,
             required=False)
 
+    # This form has dynamic input fields defined in the instance creation template
+
     class Meta:
         model = AppInstanceModel
-        fields = [ "app_name", "url_path", "app_title", "owner_org" ]
+        fields = [ "app_name", "url_path", "container_image", "app_title", "owner_org" ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -23,7 +25,7 @@ class AppInstanceForm(forms.ModelForm):
         if (instance_arg):
             self.instance = instance_arg
 
-        self.uneditable_fields = ["app_name", "url_path", "app_title"]
+        self.uneditable_fields = ["app_name", "url_path", "container_image", "app_title"]
 
         # If form is created from an existing model (editing form)
         if self.instance and self.instance.pk:
