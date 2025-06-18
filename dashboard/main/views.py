@@ -272,6 +272,7 @@ def map(request):
 
     return render(request, "map.html", context)
 
+@login_required
 def proxy(request):
     proxy_fetch_result = run(["docker", "container", "ls", "--format='{{json .Names}}'"], capture_output=True, text=True)
     proxy_fetch_string = proxy_fetch_result.stdout
