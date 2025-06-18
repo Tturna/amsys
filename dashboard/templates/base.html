@@ -15,14 +15,14 @@
     {% endblock %}
   </head>
   <body>
-      <nav class="navbar bg-primary">
-          <a class="nav-link" href="{% url 'index' %}">Instances</a>
+      <nav class="nav">
+          <a class="nav-link active" href="{% url 'index' %}">Instances</a>
           <a class="nav-link" href="{% url 'map' %}">Map</a>
           <a class="nav-link" href="{% url 'proxy' %}">Proxy</a>
           {% if request.user.is_authenticated %}
           <form method="POST" action="{% url 'logout' %}">
               {% csrf_token %}
-              <input class="nav-link" type="submit" value="Logout">
+              <input class="nav-link bg-transparent border border-0" type="submit" value="Logout">
           </form>
           <p class="nav-link disabled">Welcome {{ user.username }}</p>
           {% else %}

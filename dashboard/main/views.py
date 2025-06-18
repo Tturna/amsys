@@ -139,8 +139,9 @@ def create_app_instance(request):
         str(app_instance.pk)
     ], capture_output=True, text=True)
 
+    print(create_result.stdout)
     if (create_result.returncode != 0):
-        print(create_result.stdout)
+        print(create_result.stderr)
         app_instance.delete()
         # TODO: error msg
         return HttpResponseRedirect(reverse("index"))
