@@ -7,10 +7,12 @@ from . import forms
 
 from subprocess import run
 from datetime import datetime
+from pathlib import Path
 import secrets
 import tempfile
 import json
 import os
+import docker
 
 def index(request):
     running_instances = AppInstanceModel.objects.filter(is_running=True)
@@ -130,23 +132,55 @@ def create_app_instance(request):
                                     created_at=datetime_now, api_token=api_token)
     app_instance.save()
 
-    create_result = run([
-        os.getenv("AMSYS_CREATE_INSTANCE_SCRIPT_PATH", "./scripts/create-instance.sh"),
-        app_name,
-        url_path,
-        app_title,
-        api_token,
-        str(app_instance.pk)
-    ], capture_output=True, text=True)
+    # create_result = run([
+    #     os.getenv("AMSYS_CREATE_INSTANCE_SCRIPT_PATH", "./scripts/create-instance.sh"),
+    #     app_name,
+    #     url_path,
+    #     app_title,
+    #     api_token,
+    #     str(app_instance.pk)
+    # ], capture_output=True, text=True)
+    #
+    # print(create_result.stdout)
+    # if (create_result.returncode != 0):
+    #     print(create_result.stderr)
+    #     app_instance.delete()
+    #     # TODO: error msg
+    #     return HttpResponseRedirect(reverse("index"))
 
-    print(create_result.stdout)
-    if (create_result.returncode != 0):
-        print(create_result.stderr)
-        app_instance.delete()
-        # TODO: error msg
-        return HttpResponseRedirect(reverse("index"))
+    default_instance_base = str(Path(__file__).resolve().parent.parent)
+    print(default_instance_base)
+    instance_path = os.getenv("AMSYS_INSTANCE_BASE_PATH", default_instance_base) + f"/{app_name}"
 
-    app_instance.save()
+    # TODO: get env, labels, and volumes from the creation form
+
+    env = {
+        "AMSYS_APP_NAME": app_name,
+        "AMSYS_API_TOKEN": api_token,
+        "AMSYS_APP_ID": str(app_instance.pk)
+    }
+
+    labels = {
+        "traefik.enable": "true",
+        f"traefik.http.routers.{app_name}-router.rule": f"PathPrefix(\"/{url_path}\")",
+        f"traefik.http.services.{app_name}-service.loadbalancer.server.port": "8000",
+        f"traefik.http.middlewares.{app_name}-strip.stripprefix.prefixes": f"/{url_path}",
+        f"traefik.http.routers.{app_name}-router.middlewares": f"{app_name}-strip@docker"
+    }
+
+    volumes = {
+        "./ssh/instance_ca.pub": { "bind": "/etc/ssh/instance_ca.pub", "mode": "ro" }
+    }
+
+    docker_client = docker.from_env()
+    docker_client.containers.run(
+        image="",
+        environment=env,
+        labels=labels,
+        volumes=volumes,
+        detach=True,
+        network="amsys-net",
+        name=app_name)
 
     # Dashboard will always know which instances can transmit to which.
     # Instances should always ask what they can do before trying to do things.

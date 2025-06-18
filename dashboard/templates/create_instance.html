@@ -9,8 +9,77 @@
             <form action="{% url 'create_app_instance' %}" method="POST">
                 {% csrf_token %}
                 {{ form|crispy }}
+                <fieldset id="label-entries" class="my-5">
+                    <legend class="form-label">Container labels</legend>
+                    <div class="row">
+                        <label class="form-label col-4">Label</label>
+                        <label class="form-label col-4">Value</label>
+                        <div class="col-4">
+                            <button id="label-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <input class="form-control" name="label_entry_key[]" type="text" placeholder="traefik.enable" />
+                        </div>
+                        <div class="col-4">
+                            <input class="form-control" name="label_entry_val[]" type="text" placeholder="true" />
+                        </div>
+                        <div class="col-4 align-self-center">
+                            <button id="label-remove" class="btn btn-sm btn-outline-danger" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                        </div>
+                    </div>
+                </fieldset>
+                <fieldset id="volume-entries" class="my-5">
+                    <legend class="form-label">Container volumes</legend>
+                    <div class="row">
+                        <label class="form-label col-4">Source (relative)</label>
+                        <label class="form-label col-4">Destination (absolute)</label>
+                        <div class="col-4">
+                            <button id="label-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <input class="form-control" name="volume_entry_key[]" type="text" placeholder="config/site-config.json" />
+                        </div>
+                        <div class="col-4">
+                            <input class="form-control" name="volume_entry_val[]" type="text" placeholder="app/site-config.json" />
+                        </div>
+                        <div class="col-4 align-self-center">
+                            <button id="label-remove" class="btn btn-sm btn-outline-danger" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                        </div>
+                    </div>
+                </fieldset>
+                <fieldset id="env-entries" class="my-5">
+                    <legend class="form-label">Container environment variables</legend>
+                    <div class="row">
+                        <label class="form-label col-4">Key</label>
+                        <label class="form-label col-4">Value</label>
+                        <div class="col-4">
+                            <button id="label-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <input class="form-control" name="env_entry_key[]" type="text" placeholder="USERNAME" />
+                        </div>
+                        <div class="col-4">
+                            <input class="form-control" name="env_entry_val[]" type="text" placeholder="Example" />
+                        </div>
+                        <div class="col-4 align-self-center">
+                            <button id="label-remove" class="btn btn-sm btn-outline-danger" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                        </div>
+                    </div>
+                </fieldset>
                 <input class="btn btn-primary" type="submit" value="Create" />
             </form>
         </div>
     </div>
+
+    <script>
+        let label_entries_div = document.getElementById("label-entries");
+        let volume_entries_div = document.getElementById("volume-entries");
+        let env_entries_div = document.getElementById("env-entries");
+    </script>
 {% endblock %}

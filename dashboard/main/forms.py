@@ -12,6 +12,8 @@ class AppInstanceForm(forms.ModelForm):
             widget=forms.CheckboxSelectMultiple,
             required=False)
 
+    # This form has dynamic input fields defined in the instance creation template
+
     class Meta:
         model = AppInstanceModel
         fields = [ "app_name", "url_path", "app_title", "owner_org" ]
