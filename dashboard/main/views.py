@@ -131,7 +131,7 @@ def create_app_instance(request):
     app_instance.save()
 
     create_result = run([
-        "./scripts/create-instance.sh",
+        os.getenv("AMSYS_CREATE_INSTANCE_SCRIPT_PATH", "./scripts/create-instance.sh"),
         app_name,
         url_path,
         app_title,
@@ -160,7 +160,10 @@ def create_app_instance(request):
 def stop_instance(request, app_name):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
 
-    stop_result = run(["./scripts/stop-instance.sh", app_name], capture_output=True, text=True)
+    stop_result = run([
+        os.getenv("AMSYS_STOP_INSTANCE_SCRIPT_PATH", "./scripts/stop-instance.sh"),
+        app_name
+    ],capture_output=True, text=True)
 
     if (stop_result.returncode != 0):
         # TODO: Add error message with the message framework
