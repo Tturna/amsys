@@ -5,7 +5,6 @@ Generalize app instance creation to support other kinds of apps.
 - Support running docker compose along with individual container images
 - Let the user upload files to instance_template_files or add them manually
   with access to the server.
-- Let the user select files to copy to the instance folder from instance_template_files.
 - Let the user upload/write a custom bash script that will be executed before running
   the app instance. This lets them do whatever is lacking support in the amsys app.
   This is also really dangerous because the user can run intentionally or accidentally
