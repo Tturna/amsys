@@ -22,8 +22,6 @@ class TemplateFileModel(models.Model):
 class AppInstanceModel(models.Model):
     app_name = models.CharField(max_length=20, verbose_name="App name")
     url_path = models.CharField(max_length=20, verbose_name="URL path", blank=True, help_text="Leave empty to match app name")
-    container_image = models.CharField(max_length=50, verbose_name="Container image", help_text="e.g. addman")
-    app_title = models.CharField(max_length=20, verbose_name="App title", help_text="e.g. \"ADDMAN EXT\" or \"ADDMAN OEM B\"")
     owner_org = models.ForeignKey(OrganizationEntity, on_delete=models.CASCADE, verbose_name="Owner organization")
     template_files = models.ManyToManyField(TemplateFileModel)
     is_running = models.BooleanField()
