@@ -13,6 +13,7 @@ import tempfile
 import json
 import os
 import docker
+import shutil
 
 def index(request):
     running_instances = AppInstanceModel.objects.filter(is_running=True)
@@ -107,9 +108,11 @@ def create_app_instance(request):
 
     app_name = form.cleaned_data["app_name"]
     url_path = form.cleaned_data["url_path"]
+    container_image = form.cleaned_data["container_image"]
     owner_org = form.cleaned_data["owner_org"]
     app_title = form.cleaned_data["app_title"]
     transmit_destinations = form.cleaned_data["transmit_destinations"]
+    template_files = form.cleaned_data["template_files"]
 
     if (len(url_path) == 0):
         url_path = app_name
@@ -131,34 +134,45 @@ def create_app_instance(request):
                                     owner_org=owner_org, is_running=True,
                                     created_at=datetime_now, api_token=api_token)
     app_instance.save()
+    app_instance.template_files.set(template_files)
+    app_instance.save()
 
-    # create_result = run([
-    #     os.getenv("AMSYS_CREATE_INSTANCE_SCRIPT_PATH", "./scripts/create-instance.sh"),
-    #     app_name,
-    #     url_path,
-    #     app_title,
-    #     api_token,
-    #     str(app_instance.pk)
-    # ], capture_output=True, text=True)
-    #
-    # print(create_result.stdout)
-    # if (create_result.returncode != 0):
-    #     print(create_result.stderr)
-    #     app_instance.delete()
-    #     # TODO: error msg
-    #     return HttpResponseRedirect(reverse("index"))
-
-    default_instance_base = str(Path(__file__).resolve().parent.parent)
-    print(default_instance_base)
+    amsys_path = Path(__file__).resolve().parent.parent
+    default_instance_base = str(amsys_path.parent)
     instance_path = os.getenv("AMSYS_INSTANCE_BASE_PATH", default_instance_base) + f"/{app_name}"
 
-    # TODO: get env, labels, and volumes from the creation form
+    dir_vals = request.POST.getlist("dir_entry[]")
+    env_keys = request.POST.getlist("env_entry_key[]")
+    env_vals = request.POST.getlist("env_entry_val[]")
+    label_keys = request.POST.getlist("label_entry_key[]")
+    label_vals = request.POST.getlist("label_entry_val[]")
+    volume_keys = request.POST.getlist("volume_entry_key[]")
+    volume_vals = request.POST.getlist("volume_entry_val[]")
+
+    dir_entries = list(dir_vals)
+    env_entries = list(zip(env_keys, env_vals))
+    label_entries = list(zip(label_keys, label_vals))
+    volume_entries = list(zip(volume_keys, volume_vals))
+
+    os.mkdir(instance_path)
+
+    for template_file in template_files:
+        shutil.copy(template_file.filepath, f"{instance_path}/{template_file.filename}")
+
+    # TODO: make sure the user doesn't create any weird directories outside the instance dir
+    for dir_path in dir_entries:
+        path_in_instance = f"{instance_path}/{dir_path}"
+        if not os.path.exists(path_in_instance):
+            os.makedirs(path_in_instance)
 
     env = {
         "AMSYS_APP_NAME": app_name,
         "AMSYS_API_TOKEN": api_token,
         "AMSYS_APP_ID": str(app_instance.pk)
     }
+
+    for entry in env_entries:
+        env[entry[0]] = entry[1]
 
     labels = {
         "traefik.enable": "true",
@@ -168,13 +182,22 @@ def create_app_instance(request):
         f"traefik.http.routers.{app_name}-router.middlewares": f"{app_name}-strip@docker"
     }
 
+    for entry in label_entries:
+        labels[entry[0]] = entry[1]
+
     volumes = {
-        "./ssh/instance_ca.pub": { "bind": "/etc/ssh/instance_ca.pub", "mode": "ro" }
+        f"{amsys_path}/ssh/instance_ca.pub": { "bind": "/etc/ssh/instance_ca.pub", "mode": "ro" }
     }
+
+    for entry in volume_entries:
+        volumes[f"{instance_path}/{entry[0]}"] = {
+            "bind": entry[1],
+            "mode": "rw"
+        }
 
     docker_client = docker.from_env()
     docker_client.containers.run(
-        image="",
+        image=container_image,
         environment=env,
         labels=labels,
         volumes=volumes,

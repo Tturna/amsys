@@ -9,101 +9,145 @@
             <form action="{% url 'create_app_instance' %}" method="POST">
                 {% csrf_token %}
                 {{ form|crispy }}
-                <fieldset id="label-entries" class="my-5">
-                    <legend class="form-label">Container labels</legend>
-                        <div class="row">
-                            <label class="form-label col-4">Label</label>
-                            <label class="form-label col-4">Value</label>
-                            <div class="col-4">
-                                <button id="label-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
-                            </div>
+
+                <fieldset id="dir-entries" class="my-5">
+                    <legend class="form-label">Instance directories</legend>
+                    <div class="row justify-content-between">
+                        <label class="form-label col-4">Directory path (relative)</label>
+                        <div class="col-4">
+                            <button id="dir-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
                         </div>
-                    <div class="entry">
-                        <div class="row">
+                    </div>
+                    <div class="entry d-none">
+                        <div class="row justify-content-between">
                             <div class="col-4">
-                                <input class="form-control" name="label_entry_key[]" type="text" placeholder="traefik.enable" />
-                            </div>
-                            <div class="col-4">
-                                <input class="form-control" name="label_entry_val[]" type="text" placeholder="true" />
+                                <input class="form-control" name="dir_entry[]" type="text" placeholder="mailbox/receive" disabled />
                             </div>
                             <div class="col-4 align-self-center">
-                                <button id="label-remove" class="btn btn-sm btn-outline-danger" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
                             </div>
                         </div>
                     <div>
                 </fieldset>
+
+                <fieldset id="label-entries" class="my-5">
+                    <legend class="form-label">Container labels</legend>
+                    <div class="row">
+                        <label class="form-label col-4">Label</label>
+                        <label class="form-label col-4">Value</label>
+                        <div class="col-4">
+                            <button id="label-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
+                        </div>
+                    </div>
+                    <div class="entry d-none">
+                        <div class="row">
+                            <div class="col-4">
+                                <input class="form-control" name="label_entry_key[]" type="text" placeholder="traefik.enable" disabled />
+                            </div>
+                            <div class="col-4">
+                                <input class="form-control" name="label_entry_val[]" type="text" placeholder="true" disabled />
+                            </div>
+                            <div class="col-4 align-self-center">
+                                <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                            </div>
+                        </div>
+                    <div>
+                </fieldset>
+
                 <fieldset id="volume-entries" class="my-5">
                     <legend class="form-label">Container volumes</legend>
-                        <div class="row">
-                            <label class="form-label col-4">Source (relative)</label>
-                            <label class="form-label col-4">Destination (absolute)</label>
-                            <div class="col-4">
-                                <button id="volume-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
-                            </div>
+                    <div class="row">
+                        <label class="form-label col-4">Source (relative)</label>
+                        <label class="form-label col-4">Destination (absolute)</label>
+                        <div class="col-4">
+                            <button id="volume-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
                         </div>
-                    <div class="entry">
+                    </div>
+                    <div class="entry d-none">
                         <div class="row">
                             <div class="col-4">
-                                <input class="form-control" name="volume_entry_key[]" type="text" placeholder="config/site-config.json" />
+                                <input class="form-control" name="volume_entry_key[]" type="text" placeholder="config/site-config.json" disabled />
                             </div>
                             <div class="col-4">
-                                <input class="form-control" name="volume_entry_val[]" type="text" placeholder="app/site-config.json" />
+                                <input class="form-control" name="volume_entry_val[]" type="text" placeholder="app/site-config.json" disabled />
                             </div>
                             <div class="col-4 align-self-center">
-                                <button id="volume-remove" class="btn btn-sm btn-outline-danger" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
                             </div>
                         </div>
                     </div>
                 </fieldset>
+
                 <fieldset id="env-entries" class="my-5">
                     <legend class="form-label">Container environment variables</legend>
-                        <div class="row">
-                            <label class="form-label col-4">Key</label>
-                            <label class="form-label col-4">Value</label>
-                            <div class="col-4">
-                                <button id="env-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
-                            </div>
+                    <div class="row">
+                        <label class="form-label col-4">Key</label>
+                        <label class="form-label col-4">Value</label>
+                        <div class="col-4">
+                            <button id="env-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
                         </div>
-                    <div class="entry">
+                    </div>
+                    <div class="entry d-none">
                         <div class="row">
                             <div class="col-4">
-                                <input class="form-control" name="env_entry_key[]" type="text" placeholder="USERNAME" />
+                                <input class="form-control" name="env_entry_key[]" type="text" placeholder="USERNAME" disabled />
                             </div>
                             <div class="col-4">
-                                <input class="form-control" name="env_entry_val[]" type="text" placeholder="Example" />
+                                <input class="form-control" name="env_entry_val[]" type="text" placeholder="Example" disabled />
                             </div>
                             <div class="col-4 align-self-center">
-                                <button id="env-remove" class="btn btn-sm btn-outline-danger" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
                             </div>
                         </div>
                     </div>
                 </fieldset>
+
                 <input class="btn btn-primary" type="submit" value="Create" />
             </form>
         </div>
     </div>
 
     <script>
+        // Entry parents
+        let dir_entries_div = document.getElementById("dir-entries");
         let label_entries_div = document.getElementById("label-entries");
         let volume_entries_div = document.getElementById("volume-entries");
         let env_entries_div = document.getElementById("env-entries");
 
+        // Template entries (disabled and hidden)
+        let dir_entry = dir_entries_div.querySelector(".entry")
         let label_entry = label_entries_div.querySelector(".entry")
         let volume_entry = volume_entries_div.querySelector(".entry")
         let env_entry = env_entries_div.querySelector(".entry")
 
-        function add_entry(event) {
-
+        // Clone entry, enable it and show it
+        function handle_add_entry_button(event) {
+            event.preventDefault();
+            const entry = event.target.closest("fieldset").querySelector(".entry");
+            const clone = entry.cloneNode(true);
+            clone.classList.remove("d-none")
+            clone.querySelectorAll("input").forEach(input => {
+                input.value = "";
+                input.disabled = false;
+            });
+            entry.parentNode.appendChild(clone);
         }
 
-        document.getElementById("label-add").addEventListener("click", add_entry(e));
+        document.getElementById("dir-add").addEventListener("click", e => handle_add_entry_button(e));
+        document.getElementById("label-add").addEventListener("click", e => handle_add_entry_button(e));
+        document.getElementById("volume-add").addEventListener("click", e => handle_add_entry_button(e));
+        document.getElementById("env-add").addEventListener("click", e => handle_add_entry_button(e));
 
-        document.addEventListener('click', function (e) {
-            if (e.target && e.target.classList.contains('add-entry')) {
-                const entry = e.target.closest('.entry');
-                const clone = entry.cloneNode(true);
-                clone.querySelectorAll('input').forEach(input => input.value = '');
-                entry.parentNode.appendChild(clone);
+        // Remove entry unless it's the last (last remaining is the hidden template one
+        // that shouldn't even have a remove button.
+        document.addEventListener("click", function (e) {
+            if (e.target && e.target.classList.contains("remove-entry")) {
+                e.preventDefault();
+                const entry = e.target.closest(".entry");
+
+                if (entry.parentNode.getElementsByClassName("entry").length > 1) {
+                    entry.remove();
+                }
             }
         });
     </script>

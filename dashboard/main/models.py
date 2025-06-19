@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 class OrganizationEntity(models.Model):
     org_name = models.CharField(max_length=20, verbose_name="Organization name")
@@ -8,11 +9,23 @@ class OrganizationEntity(models.Model):
     def __str__(self):
         return str(self.org_name)
 
+def instance_template_files():
+    return settings.INSTANCE_TEMPLATE_FILES_DIR
+
+class TemplateFileModel(models.Model):
+    filename = models.CharField(max_length=512)
+    filepath = models.CharField(max_length=512)
+
+    def __str__(self):
+        return str(self.filename)
+
 class AppInstanceModel(models.Model):
     app_name = models.CharField(max_length=20, verbose_name="App name")
     url_path = models.CharField(max_length=20, verbose_name="URL path", blank=True, help_text="Leave empty to match app name")
+    container_image = models.CharField(max_length=50, verbose_name="Container image", help_text="e.g. addman")
     app_title = models.CharField(max_length=20, verbose_name="App title", help_text="e.g. \"ADDMAN EXT\" or \"ADDMAN OEM B\"")
     owner_org = models.ForeignKey(OrganizationEntity, on_delete=models.CASCADE, verbose_name="Owner organization")
+    template_files = models.ManyToManyField(TemplateFileModel)
     is_running = models.BooleanField()
     created_at = models.DateTimeField()
     api_token = models.CharField(max_length=20)
