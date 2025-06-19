@@ -13,6 +13,7 @@ import tempfile
 import json
 import os
 import docker
+import shutil
 
 def index(request):
     running_instances = AppInstanceModel.objects.filter(is_running=True)
@@ -111,6 +112,7 @@ def create_app_instance(request):
     owner_org = form.cleaned_data["owner_org"]
     app_title = form.cleaned_data["app_title"]
     transmit_destinations = form.cleaned_data["transmit_destinations"]
+    template_files = form.cleaned_data["template_files"]
 
     if (len(url_path) == 0):
         url_path = app_name
@@ -132,6 +134,8 @@ def create_app_instance(request):
                                     owner_org=owner_org, is_running=True,
                                     created_at=datetime_now, api_token=api_token)
     app_instance.save()
+    app_instance.template_files.set(template_files)
+    app_instance.save()
 
     amsys_path = Path(__file__).resolve().parent.parent
     default_instance_base = str(amsys_path.parent)
@@ -149,6 +153,11 @@ def create_app_instance(request):
     env_entries = list(zip(env_keys, env_vals))
     label_entries = list(zip(label_keys, label_vals))
     volume_entries = list(zip(volume_keys, volume_vals))
+
+    os.mkdir(instance_path)
+
+    for template_file in template_files:
+        shutil.copy(template_file.filepath, f"{instance_path}/{template_file.filename}")
 
     # TODO: make sure the user doesn't create any weird directories outside the instance dir
     for dir_path in dir_entries:

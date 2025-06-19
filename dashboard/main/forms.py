@@ -1,10 +1,28 @@
 from django import forms
-from .models import OrganizationEntity, AppInstanceModel
+from django.conf import settings
+from .models import OrganizationEntity, AppInstanceModel, TemplateFileModel
+import os
 
 class OrganizationEntityForm(forms.ModelForm):
     class Meta:
         model = OrganizationEntity
         fields = "__all__"
+
+def update_instance_template_file_selection():
+    files = os.listdir(settings.INSTANCE_TEMPLATE_FILES_DIR)
+
+    template_files = TemplateFileModel.objects.all()
+
+    for tf in template_files:
+        if tf.filename not in files:
+            tf.delete()
+
+    for file in files:
+        filepath = f"{settings.INSTANCE_TEMPLATE_FILES_DIR}/{file}"
+
+        if not TemplateFileModel.objects.filter(filepath=filepath).exists():
+            template_file = TemplateFileModel(filename=file, filepath=filepath)
+            template_file.save()
 
 class AppInstanceForm(forms.ModelForm):
     transmit_destinations = forms.ModelMultipleChoiceField(
@@ -12,20 +30,27 @@ class AppInstanceForm(forms.ModelForm):
             widget=forms.CheckboxSelectMultiple,
             required=False)
 
+    template_files = forms.ModelMultipleChoiceField(
+            queryset=TemplateFileModel.objects.all(),
+            widget=forms.CheckboxSelectMultiple,
+            required=False)
+
     # This form has dynamic input fields defined in the instance creation template
 
     class Meta:
         model = AppInstanceModel
-        fields = [ "app_name", "url_path", "container_image", "app_title", "owner_org" ]
+        fields = [ "app_name", "url_path", "container_image", "app_title", "owner_org", "template_files" ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        update_instance_template_file_selection()
 
         instance_arg = kwargs.get("instance", None)
         if (instance_arg):
             self.instance = instance_arg
 
-        self.uneditable_fields = ["app_name", "url_path", "container_image", "app_title"]
+        self.uneditable_fields = ["app_name", "url_path", "container_image", "app_title", "template_files"]
 
         # If form is created from an existing model (editing form)
         if self.instance and self.instance.pk:

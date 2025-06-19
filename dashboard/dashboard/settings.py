@@ -22,6 +22,8 @@ AMSYS_TRAEFIK_URL = getenv("AMSYS_TRAEFIK_URL", "http://localhost:8080/")
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+INSTANCE_TEMPLATE_FILES_DIR = BASE_DIR / "instance_template_files"
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
