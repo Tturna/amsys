@@ -22,4 +22,7 @@ the ADDMAN name.
 
 Application creation presets (ADDMAN, RAPiD-e, option to add custom)
 
+Make it so the index page, view instance page etc. don't hard code the instance domain
+to localhost.
+
 App name validation in instance creation form.

@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from enum import Enum
 
 class OrganizationEntity(models.Model):
     org_name = models.CharField(max_length=20, verbose_name="Organization name")
@@ -19,14 +20,26 @@ class TemplateFileModel(models.Model):
     def __str__(self):
         return str(self.filename)
 
+class AppStatusEnum(Enum):
+    RUNNING = 1
+    STOPPED = 2
+    MISSING = 3
+    REMOVED = 4
+    ERROR   = 5
+
+    @classmethod
+    def as_tuple_list(cls):
+        return [(x.name, x.value) for x in list(cls)]
+
 class AppInstanceModel(models.Model):
     app_name = models.CharField(max_length=20, verbose_name="App name")
     url_path = models.CharField(max_length=20, verbose_name="URL path", blank=True, help_text="Leave empty to match app name")
     owner_org = models.ForeignKey(OrganizationEntity, on_delete=models.CASCADE, verbose_name="Owner organization")
     template_files = models.ManyToManyField(TemplateFileModel)
-    is_running = models.BooleanField()
+    status = models.IntegerField(choices=AppStatusEnum.as_tuple_list())
     created_at = models.DateTimeField()
     api_token = models.CharField(max_length=20)
+    using_compose = models.BooleanField()
 
     def __str__(self):
         return str(self.app_name)

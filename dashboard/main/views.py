@@ -2,7 +2,7 @@ from django.shortcuts import render, reverse, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, HttpResponseForbidden, JsonResponse
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.csrf import csrf_exempt
-from .models import AppInstanceModel, AppConnectionModel, OrganizationEntity
+from .models import AppInstanceModel, AppConnectionModel, OrganizationEntity, AppStatusEnum
 from . import forms
 
 from subprocess import run
@@ -16,39 +16,88 @@ import docker
 import shutil
 
 def index(request):
-    running_instances = AppInstanceModel.objects.filter(is_running=True)
-    stopped_instances = AppInstanceModel.objects.filter(is_running=False)
+    all_instances = AppInstanceModel.objects.all()
+    docker_client = docker.from_env()
+    instance_statuses = []
 
-    name_fetch_result = run(["docker", "container", "ls", "-a", "--format='{{json .Names}}'"], capture_output=True, text=True)
-    existing_containers_string = name_fetch_result.stdout
-    existing_containers_string = existing_containers_string.replace("\"", "")
-    existing_containers_string = existing_containers_string.replace("\'", "")
-    existing_containers = existing_containers_string.split("\n")
+    for inst in all_instances:
+        containers = []
 
-    stopped_but_existing = []
-    stopped_nonexistent = []
-
-    for instance in stopped_instances:
-        if instance.app_name in existing_containers:
-            stopped_but_existing.append(instance)
+        if inst.using_compose:
+            containers = docker_client.containers.list(filters={
+                "label": f"com.docker.compose.project={inst.app_name}"
+            })
         else:
-            stopped_nonexistent.append(instance)
+            containers = docker_client.containers.list(filters={
+                "name": inst.app_name
+            })
+
+        if len(containers) == 0:
+            inst.status = AppStatusEnum.MISSING.value
+            break
+
+        stopped_containers = []
+        running_containers = []
+
+        for c in containers:
+            if c.status == "running":
+                running_containers.append(c.name)
+            else:
+                inst.status = AppStatusEnum.STOPPED.value
+                stopped_containers.append(c.name)
+
+        if len(stopped_containers) == 0:
+            inst.status = AppStatusEnum.RUNNING.value
+
+            instance_statuses.append({
+                "instance": inst,
+                "status": AppStatusEnum(inst.status).name,
+                "target_containers": running_containers,
+                "status_message": "All containers running",
+                "is_error": False
+            })
+        elif len(running_containers) == 0:
+            instance_statuses.append({
+                "instance": inst,
+                "status": AppStatusEnum(inst.status).name,
+                "target_containers": stopped_containers,
+                "status_message": "Containers are stopped",
+                "is_error": False
+            })
+        elif len(stopped_containers) > 0 and len(running_containers) > 0:
+            # This should only happen when running with compose and not
+            # all containers are working
+            inst.status = AppStatusEnum.ERROR.value
+
+            instance_statuses.append({
+                "instance": inst,
+                "status": AppStatusEnum(inst.status).name,
+                "target_containers": stopped_containers,
+                "status_message": "Some containers are not running!",
+                "is_error": True
+            })
+        else:
+            inst.status = AppStatusEnum.ERROR.value
+
+            instance_statuses.append({
+                "instance": inst,
+                "status": AppStatusEnum(inst.status).name,
+                "target_containers": [],
+                "status_message": "AMSYS error. This should never happen.",
+                "is_error": True
+            })
 
     organizations = OrganizationEntity.objects.all()
 
-    proxy_fetch_result = run(["docker", "container", "ls", "--format='{{json .Names}}'"], capture_output=True, text=True)
-    proxy_fetch_string = proxy_fetch_result.stdout
-    proxy_fetch_string = proxy_fetch_string.replace("\"", "")
-    proxy_fetch_string = proxy_fetch_string.replace("\'", "")
-    running_containers = proxy_fetch_string.split("\n")
+    proxy_containers = docker_client.containers.list(filters={
+        "name": "amsys-traefik"
+    })
 
-    is_proxy_running = "amsys-traefik" in running_containers
+    is_proxy_running = len(proxy_containers) == 1
 
     context = {
         "organizations": organizations,
-        "running_instances": running_instances,
-        "stopped_existing_instances": stopped_but_existing,
-        "stopped_nonexistent_instances": stopped_nonexistent,
+        "instance_statuses": instance_statuses,
         "is_proxy_running": is_proxy_running
     }
 
@@ -147,17 +196,20 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
 
     return True
 
-def create_app_from_compose(request, instance_path):
+def create_app_from_compose(request, instance_path, app_name):
     compose_file = request.FILES["compose_file"]
 
     with open(f"{instance_path}/docker-compose.yaml", "wb+") as destination:
         for chunk in compose_file.chunks():
             destination.write(chunk)
 
-    start_compose_result = run(["docker", "compose", "up", "-d"], cwd=instance_path, capture_output=True, text=True)
-    print(start_compose_result.stdout)
+    # Set the compose project name with -p so it can be used to filter container lists.
+    # This way the compose file can create containers with any name and still the amsys
+    # app can find them.
+    start_compose_result = run(["docker", "compose", "-p", app_name, "up", "-d"], cwd=instance_path, capture_output=True, text=True)
 
     if start_compose_result.returncode != 0:
+        print(start_compose_result.stdout)
         print(start_compose_result.stderr)
         return False
 
@@ -217,8 +269,9 @@ def create_app_instance(request, using_compose=False):
     api_token = secrets.token_urlsafe(16)
 
     app_instance = AppInstanceModel(app_name=app_name, url_path=url_path,
-                                    owner_org=owner_org, is_running=True,
-                                    created_at=datetime_now, api_token=api_token)
+                                    owner_org=owner_org, status=AppStatusEnum.RUNNING.value,
+                                    created_at=datetime_now, api_token=api_token,
+                                    using_compose=using_compose)
     app_instance.save()
     app_instance.template_files.set(template_files)
     app_instance.save()
@@ -245,7 +298,7 @@ def create_app_instance(request, using_compose=False):
     started_successfully = False
 
     if using_compose:
-        started_successfully = create_app_from_compose(request, instance_path)
+        started_successfully = create_app_from_compose(request, instance_path, app_name)
     else:
         started_successfully = create_app_from_image(request, form, app_name, url_path, api_token, app_instance, amsys_path, instance_path)
 
@@ -282,7 +335,7 @@ def stop_instance(request, app_name):
         print(stop_result.stdout)
         return HttpResponseRedirect(reverse("index"))
 
-    instance.is_running = False
+    instance.status = AppStatusEnum.STOPPED.value
     instance.save()
 
     return HttpResponse(status=204)
@@ -299,7 +352,7 @@ def start_instance(request, app_name):
         print(start_result.stdout)
         return HttpResponseRedirect(reverse("index"))
 
-    instance.is_running = True
+    instance.status = AppStatusEnum.RUNNING.value
     instance.save()
 
     return HttpResponse(status=204)
@@ -496,7 +549,7 @@ def available_destinations(request, id):
         return HttpResponseForbidden()
 
     destinations_raw = AppConnectionModel.objects.filter(instance_from=request_instance)
-    destinations_available = destinations_raw.filter(instance_to__is_running=True)
+    destinations_available = destinations_raw.filter(instance_to__status=AppStatusEnum.RUNNING.value)
     destinations = [{ "id": x.instance_to.pk, "app_name": x.instance_to.app_name } for x in destinations_available]
 
     data = {

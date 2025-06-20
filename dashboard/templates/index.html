@@ -47,86 +47,61 @@
             <button class="btn btn-primary disabled" disabled="disabled">Create new instance</button><span style="color: red"> No organizations defined</span>
         {% endif %}
 
-        <h3 class="mt-5">Running app instances</h3>
-        {% for instance in running_instances %}
+        {% for status_entry in instance_statuses %}
         <div class="card my-3">
             <div class="card-body">
                 <div class="row">
                     <div class="col-8">
-                        <h4 class="card-title">{{ instance.app_name }}<span class="badge bg-secondary mx-3" id="{{ instance.app_name }}_status">Running</span></h4>
-                        <p class="card-text text-body-secondary">{{ instance.owner_org.org_name }} 
-                        - <a class="card-link" href="/{{ instance.url_path }}">/{{ instance.url_path }}</a></p>
-                        <a href="/view_instance/{{ instance.app_name }}"><button class="btn btn-sm btn-success">View</button></a>
+                        <h4 class="card-title">{{ status_entry.instance.app_name }}
+                            {% if status_entry.status == "RUNNING" %}
+                            <span class="badge bg-success mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
+                            {% elif status_entry.status == "STOPPED" %}
+                            <span class="badge bg-secondary mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
+                            {% elif status_entry.status == "MISSING" %}
+                            <span class="badge bg-warning mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
+                            {% elif status_entry.status == "ERROR" or status_entry.status == "REMOVED" %}
+                            <span class="badge bg-danger mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
+                            {% endif %}
+                        </h4>
+                        <p class="card-text text-body-secondary">{{ status_entry.instance.owner_org.org_name }} 
+                        - <a class="card-link" href="http://localhost/{{ status_entry.instance.url_path }}">/{{ status_entry.instance.url_path }}</a>
+                        {% if not is_proxy_running %}
+                        <em class="text-danger"> Proxy inactive</em>
+                        {% endif %}
+                        </p>
 
-                        {% if perms.main.change_appinstancemodel %}
-                        <button class="btn btn-sm btn-outline-danger" id="{{ instance.app_name }}_stop_button" onclick="call_stop_instance('{{ instance.app_name }}')">Stop</button>
+                        <div class="mb-3">
+                            <a href="/view_instance/{{ status_entry.instance.app_name }}"><button class="btn btn-sm btn-success">View</button></a>
+
+                            {% if perms.main.change_appinstancemodel %}
+                                {% if status_entry.status == "RUNNING" %}
+                                <button class="btn btn-sm btn-outline-warning" id="{{ status_entry.instance.app_name }}_stop_button" onclick="call_stop_instance('{{ status_entry.instance.app_name }}')">Stop</button>
+                                {% elif status_entry.status == "STOPPED" %}
+                                <button class="btn btn-sm btn-outline-success" id="{{ status_entry.instance.app_name }}_start_button" onclick="call_start_instance('{{ status_entry.instance.app_name }}')">Start</button>
+                                {% elif status_entry.status == "REMOVED" %}
+                                <button class="btn btn-sm btn-outline-success" id="{{ status_entry.instance.app_name }}_restart_button" onclick="call_restart_instance('{{ status_entry.instance.app_name }}')">Restart</button>
+                                {% else %}
+                                <button class="btn btn-sm btn-outline-danger" id="{{ status_entry.instance.app_name }}_remove_button" onclick="call_remove_instance('{{ status_entry.instance.app_name }}')">Remove</button>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+
+                        <p class="card-subtitle text-body-secondary"><strong>Containers</strong></p>
+
+                        <ul>
+                        {% for container in status_entry.target_containers %}
+                        <li class="card-text text-body-secondary">{{ container }}</li>
+                        {% endfor %}
+                        </ul>
+
+                        {% if status_entry.is_error %}
+                        <div class="alert alert-danger p-2">{{ status_entry.status_message }}</div>
                         {% else %}
-                        <button class="btn btn-sm btn-outline-danger disabled" disabled="disabled">Stop</button>
+                        <div class="alert alert-success p-2">{{ status_entry.status_message }}</div>
                         {% endif %}
                     </div>
                     <div class="col-4">
-                        <p class="card-text text-end">Created: {{ instance.created_at }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-
-        <h3 class="mt-5">Stopped app instances</h3>
-        {% for instance in stopped_existing_instances %}
-        <div class="card my-3">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-8">
-                        <h4 class="card-title">{{ instance.app_name }}<span class="badge bg-secondary mx-3" id="{{ instance.app_name }}_status">Stopped</span></h4>
-                        <p class="card-text text-body-secondary">{{ instance.owner_org.org_name }} 
-                        - <a class="card-link" href="/{{ instance.url_path }}">/{{ instance.url_path }}</a></p>
-                        <a href="/view_instance/{{ instance.app_name }}"><button class="btn btn-sm btn-success">View</button></a>
-
-                        {% if perms.main.change_appinstancemodel %}
-                        <button class="btn btn-sm btn-secondary" id="{{ instance.app_name }}_start_button" onclick="call_start_instance('{{ instance.app_name }}')">Start</button>
-                        {% else %}
-                        <button class="btn btn-sm btn-secondary disabled" disabled="disabled">Start</button>
-                        {% endif %}
-
-                        {% if perms.main.delete_appinstancemodel %}
-                        <button class="btn btn-sm btn-outline-danger" id="{{ instance.app_name }}_remove_button" onclick="call_remove_instance('{{ instance.app_name }}')">Remove</button>
-                        {% else %}
-                        <button class="btn btn-sm btn-outline-danger disabled" disabled="disabled">Remove</button>
-                        {% endif %}
-                    </div>
-                    <div class="col-4">
-                        <p class="card-text text-end">Created: {{ instance.created_at }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-
-        <h3 class="mt-5">Missing instances</h3>
-
-        {% if stopped_nonexistent_instances %}
-            <p class="text-body-secondary">These instances have been stopped and can't be found by Docker</p>
-        {% endif %}
-
-        {% for instance in stopped_nonexistent_instances %}
-        <div class="card my-3">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-8">
-                        <h4 class="card-title">{{ instance.app_name }}<span class="badge bg-secondary mx-3" id="{{ instance.app_name }}_status">Missing</span></h4>
-                        <p class="card-text text-body-secondary">{{ instance.owner_org.org_name }} 
-                        - <a class="card-link" href="/{{ instance.url_path }}">/{{ instance.url_path }}</a></p>
-                        <a href="/view_instance/{{ instance.app_name }}"><button class="btn btn-sm btn-success">View</button></a>
-
-                        {% if perms.main.delete_appinstancemodel %}
-                        <button class="btn btn-sm btn-outline-danger" id="{{ instance.app_name }}_remove_button" onclick="call_remove_instance('{{ instance.app_name }}')">Remove</button>
-                        {% else %}
-                        <button class="btn btn-sm btn-outline-danger disabled" disabled="disabled">Remove</button>
-                        {% endif %}
-                    </div>
-                    <div class="col-4">
-                        <p class="card-text text-end">Created: {{ instance.created_at }}</p>
+                        <p class="card-text text-end">Created: {{ status_entry.instance.created_at }}</p>
                     </div>
                 </div>
             </div>
