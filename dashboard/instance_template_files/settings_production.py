@@ -5,7 +5,7 @@ import os
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
-app_name = os.getenv('ADDMAN_APP_NAME', '')
+app_name = os.getenv('AMSYS_APP_NAME', '')
 app_name = app_name.replace('/', '')
 
 if (app_name != ''):
