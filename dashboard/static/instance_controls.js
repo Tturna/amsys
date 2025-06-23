@@ -44,12 +44,42 @@ function call_start_instance(app_name) {
     });
 }
 
+function call_restart_instance(app_name) {
+    let status_span = document.getElementById(`${app_name}_status`);
+
+    if (status_span) {
+        status_span.innerText = "Restarting...";
+    }
+
+    let restart_button = document.getElementById(`${app_name}_restart_button`);
+
+    if (restart_button) {
+        restart_button.disabled = true;
+    }
+
+    fetch(`/restart_instance/${app_name}`)
+    .then(response => {
+        window.location = "/";
+    });
+}
+
 function call_remove_instance(app_name) {
-    if (!confirm(`Are you sure you want to permanently remove instance "${app_name}"? This can not be undone.`)) {
+    if (!confirm(`Are you sure you want to permanently remove instance "${app_name}"? All data will be lost. This can not be undone.`)) {
         return;
     }
 
     fetch(`/remove_instance/${app_name}`)
+    .then(response => {
+        window.location = "/";
+    });
+}
+
+function call_forget_instance(app_name) {
+    if (!confirm(`Are you sure you want to permanently forget instance "${app_name}"? The instance can not be started anymore.`)) {
+        return;
+    }
+
+    fetch(`/forget_instance/${app_name}`)
     .then(response => {
         window.location = "/";
     });

@@ -15,6 +15,19 @@ import os
 import docker
 import shutil
 
+def get_amsys_path():
+    return Path(__file__).resolve().parent.parent
+
+def get_instance_path(app_name):
+    amsys_path = get_amsys_path()
+    default_instance_base = str(amsys_path.parent)
+    instance_path = os.getenv("AMSYS_INSTANCE_BASE_PATH", default_instance_base) + f"/{app_name}"
+
+    if not os.path.exists(instance_path):
+        os.mkdir(instance_path)
+
+    return instance_path
+
 def index(request):
     all_instances = AppInstanceModel.objects.all()
     docker_client = docker.from_env()
@@ -24,17 +37,34 @@ def index(request):
         containers = []
 
         if inst.using_compose:
-            containers = docker_client.containers.list(filters={
+            containers = docker_client.containers.list(all=True, filters={
                 "label": f"com.docker.compose.project={inst.app_name}"
             })
         else:
-            containers = docker_client.containers.list(filters={
+            containers = docker_client.containers.list(all=True, filters={
                 "name": inst.app_name
             })
 
         if len(containers) == 0:
-            inst.status = AppStatusEnum.MISSING.value
-            break
+            if inst.status != AppStatusEnum.REMOVED.value:
+                inst.status = AppStatusEnum.MISSING.value
+                instance_statuses.append({
+                    "instance": inst,
+                    "status": AppStatusEnum(inst.status).name,
+                    "target_containers": [],
+                    "status_message": "Instance corrupted! Containers are missing. Data may be recoverable.",
+                    "is_error": True
+                })
+            else:
+                instance_statuses.append({
+                    "instance": inst,
+                    "status": AppStatusEnum(inst.status).name,
+                    "target_containers": [],
+                    "status_message": "Containers removed.",
+                    "is_error": True
+                })
+            
+            continue
 
         stopped_containers = []
         running_containers = []
@@ -134,7 +164,7 @@ def create_organization(request):
 
     return HttpResponseRedirect(reverse("index"))
 
-def create_app_from_image(request, form, app_name, url_path, api_token, app_instance, amsys_path, instance_path):
+def create_app_from_image(request, form, app_name, url_path, api_token, app_instance, instance_path):
     container_image = form.cleaned_data["container_image"]
 
     env_keys = request.POST.getlist("env_entry_key[]")
@@ -167,6 +197,8 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
 
     for entry in label_entries:
         labels[entry[0]] = entry[1]
+
+    amsys_path = get_amsys_path()
 
     volumes = {
         f"{amsys_path}/ssh/instance_ca.pub": { "bind": "/etc/ssh/instance_ca.pub", "mode": "ro" }
@@ -276,12 +308,8 @@ def create_app_instance(request, using_compose=False):
     app_instance.template_files.set(template_files)
     app_instance.save()
 
-    amsys_path = Path(__file__).resolve().parent.parent
-    default_instance_base = str(amsys_path.parent)
-    instance_path = os.getenv("AMSYS_INSTANCE_BASE_PATH", default_instance_base) + f"/{app_name}"
-
-    if not os.path.exists(instance_path):
-        os.mkdir(instance_path)
+    amsys_path = get_amsys_path()
+    instance_path = get_instance_path(app_name)
 
     for template_file in template_files:
         shutil.copy(template_file.filepath, f"{instance_path}/{template_file.filename}")
@@ -300,7 +328,7 @@ def create_app_instance(request, using_compose=False):
     if using_compose:
         started_successfully = create_app_from_compose(request, instance_path, app_name)
     else:
-        started_successfully = create_app_from_image(request, form, app_name, url_path, api_token, app_instance, amsys_path, instance_path)
+        started_successfully = create_app_from_image(request, form, app_name, url_path, api_token, app_instance, instance_path)
 
     if not started_successfully:
         # TODO: error msg
@@ -324,16 +352,20 @@ def create_app_instance(request, using_compose=False):
 @permission_required("main.change_appinstancemodel")
 def stop_instance(request, app_name):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
+    docker_client = docker.from_env()
 
-    stop_result = run([
-        os.getenv("AMSYS_STOP_INSTANCE_SCRIPT_PATH", "./scripts/stop-instance.sh"),
-        app_name
-    ], capture_output=True, text=True)
+    instance_path = get_instance_path(app_name)
 
-    if (stop_result.returncode != 0):
-        # TODO: Add error message with the message framework
-        print(stop_result.stdout)
-        return HttpResponseRedirect(reverse("index"))
+    if (instance.using_compose):
+        stop_compose_result = run(["docker", "compose", "-p", app_name, "stop"], cwd=instance_path, capture_output=True, text=True)
+
+        if stop_compose_result.returncode != 0:
+            print(stop_compose_result.stdout)
+            print(stop_compose_result.stderr)
+            return HttpResponseRedirect(reverse("index"))
+    else:
+        app_container = docker_client.containers.get(app_name)
+        app_container.stop()
 
     instance.status = AppStatusEnum.STOPPED.value
     instance.save()
@@ -344,13 +376,20 @@ def stop_instance(request, app_name):
 @permission_required("main.change_appinstancemodel")
 def start_instance(request, app_name):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
+    docker_client = docker.from_env()
 
-    start_result = run(["./scripts/start-instance.sh", app_name], capture_output=True, text=True)
+    instance_path = get_instance_path(app_name)
 
-    if (start_result.returncode != 0):
-        # TODO: Add error message with the message framework
-        print(start_result.stdout)
-        return HttpResponseRedirect(reverse("index"))
+    if (instance.using_compose):
+        start_compose_result = run(["docker", "compose", "-p", app_name, "start"], cwd=instance_path, capture_output=True, text=True)
+
+        if start_compose_result.returncode != 0:
+            print(start_compose_result.stdout)
+            print(start_compose_result.stderr)
+            return HttpResponseRedirect(reverse("index"))
+    else:
+        app_container = docker_client.containers.get(app_name)
+        app_container.start()
 
     instance.status = AppStatusEnum.RUNNING.value
     instance.save()
@@ -358,17 +397,56 @@ def start_instance(request, app_name):
     return HttpResponse(status=204)
 
 @login_required
+@permission_required("main.change_appinstancemodel")
+def restart_instance(request, app_name):
+    instance = get_object_or_404(AppInstanceModel, app_name=app_name)
+    docker_client = docker.from_env()
+
+    instance_path = get_instance_path(app_name)
+
+    if (instance.using_compose):
+        remove_compose_result = run(["docker", "compose", "-p", app_name, "kill"], cwd=instance_path, capture_output=True, text=True)
+
+        if remove_compose_result.returncode != 0:
+            print(remove_compose_result.stdout)
+            print(remove_compose_result.stderr)
+            return HttpResponseRedirect(reverse("index"))
+    else:
+        app_container = docker_client.containers.get(app_name)
+        app_container.remove(v=True, force=True)
+
+    # TODO: Ensure the app name can't change the instance path to something weird
+    shutil.rmtree(instance_path)
+
+    instance.status = AppStatusEnum.REMOVED.value
+    instance.save()
+    
+    # TODO: Recreate instance from saved parameters
+
+@login_required
 @permission_required("main.delete_appinstancemodel")
 def remove_instance(request, app_name):
-    remove_result = run(["./scripts/destroy-instance.sh", app_name], capture_output=True, text=True)
-
-    if (remove_result.returncode != 0):
-        # TODO: error msg
-        print(remove_result.stdout)
-        return HttpResponseRedirect(reverse("index"))
-
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
-    instance.delete()
+    docker_client = docker.from_env()
+
+    instance_path = get_instance_path(app_name)
+
+    if (instance.using_compose):
+        remove_compose_result = run(["docker", "compose", "-p", app_name, "down"], cwd=instance_path, capture_output=True, text=True)
+
+        if remove_compose_result.returncode != 0:
+            print(remove_compose_result.stdout)
+            print(remove_compose_result.stderr)
+            return HttpResponseRedirect(reverse("index"))
+    else:
+        app_container = docker_client.containers.get(app_name)
+        app_container.remove(v=True, force=True)
+
+    # TODO: Ensure the app name can't change the instance path to something weird
+    shutil.rmtree(instance_path)
+
+    instance.status = AppStatusEnum.REMOVED.value
+    instance.save()
 
     return HttpResponse(status=204)
 
@@ -426,6 +504,14 @@ def edit_instance(request, app_name):
             return HttpResponseRedirect(reverse("edit_instance", args=[instance.app_name]))
     else:
         return HttpResponseRedirect(reverse("index"))
+
+@login_required
+@permission_required("main.change_appinstancemodel")
+def forget_instance(request, app_name):
+    instance = get_object_or_404(AppInstanceModel, app_name=app_name)
+    instance.delete()
+
+    return HttpResponse(status=204)
 
 def map(request):
     orgs = OrganizationEntity.objects.all().values("org_name", "latitude", "longitude")

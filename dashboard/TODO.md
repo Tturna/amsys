@@ -10,7 +10,6 @@ Generalize app instance creation to support other kinds of apps.
 
 Message framework.
 
-Make the app list understand compose based apps.
 Add instructions and validation for compose files.
 
 Make the dynamic form inputs of app creation (like labels, env, volumes...) part of

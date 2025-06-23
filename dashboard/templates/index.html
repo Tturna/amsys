@@ -78,15 +78,21 @@
                                 <button class="btn btn-sm btn-outline-warning" id="{{ status_entry.instance.app_name }}_stop_button" onclick="call_stop_instance('{{ status_entry.instance.app_name }}')">Stop</button>
                                 {% elif status_entry.status == "STOPPED" %}
                                 <button class="btn btn-sm btn-outline-success" id="{{ status_entry.instance.app_name }}_start_button" onclick="call_start_instance('{{ status_entry.instance.app_name }}')">Start</button>
+                                <button class="btn btn-sm btn-outline-danger" id="{{ status_entry.instance.app_name }}_remove_button" onclick="call_remove_instance('{{ status_entry.instance.app_name }}')">Remove</button>
                                 {% elif status_entry.status == "REMOVED" %}
                                 <button class="btn btn-sm btn-outline-success" id="{{ status_entry.instance.app_name }}_restart_button" onclick="call_restart_instance('{{ status_entry.instance.app_name }}')">Restart</button>
+                                <button class="btn btn-sm btn-outline-secondary" id="{{ status_entry.instance.app_name }}_forget_button" onclick="call_forget_instance('{{ status_entry.instance.app_name }}')">Forget</button>
                                 {% else %}
                                 <button class="btn btn-sm btn-outline-danger" id="{{ status_entry.instance.app_name }}_remove_button" onclick="call_remove_instance('{{ status_entry.instance.app_name }}')">Remove</button>
                                 {% endif %}
                             {% endif %}
                         </div>
 
+                        {% if status_entry.instance.using_compose %}
+                        <p class="card-subtitle text-body-secondary"><strong>Containers</strong><span class="badge bg-secondary mx-5">Compose</span></p>
+                        {% else %}
                         <p class="card-subtitle text-body-secondary"><strong>Containers</strong></p>
+                        {% endif %}
 
                         <ul>
                         {% for container in status_entry.target_containers %}
