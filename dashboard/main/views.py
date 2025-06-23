@@ -2,7 +2,7 @@ from django.shortcuts import render, reverse, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, HttpResponseForbidden, JsonResponse
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.csrf import csrf_exempt
-from .models import AppInstanceModel, AppConnectionModel, OrganizationEntity
+from .models import AppInstanceModel, AppConnectionModel, OrganizationEntity, AppStatusEnum
 from . import forms
 
 from subprocess import run
@@ -16,39 +16,88 @@ import docker
 import shutil
 
 def index(request):
-    running_instances = AppInstanceModel.objects.filter(is_running=True)
-    stopped_instances = AppInstanceModel.objects.filter(is_running=False)
+    all_instances = AppInstanceModel.objects.all()
+    docker_client = docker.from_env()
+    instance_statuses = []
 
-    name_fetch_result = run(["docker", "container", "ls", "-a", "--format='{{json .Names}}'"], capture_output=True, text=True)
-    existing_containers_string = name_fetch_result.stdout
-    existing_containers_string = existing_containers_string.replace("\"", "")
-    existing_containers_string = existing_containers_string.replace("\'", "")
-    existing_containers = existing_containers_string.split("\n")
+    for inst in all_instances:
+        containers = []
 
-    stopped_but_existing = []
-    stopped_nonexistent = []
-
-    for instance in stopped_instances:
-        if instance.app_name in existing_containers:
-            stopped_but_existing.append(instance)
+        if inst.using_compose:
+            containers = docker_client.containers.list(filters={
+                "label": f"com.docker.compose.project={inst.app_name}"
+            })
         else:
-            stopped_nonexistent.append(instance)
+            containers = docker_client.containers.list(filters={
+                "name": inst.app_name
+            })
+
+        if len(containers) == 0:
+            inst.status = AppStatusEnum.MISSING.value
+            break
+
+        stopped_containers = []
+        running_containers = []
+
+        for c in containers:
+            if c.status == "running":
+                running_containers.append(c.name)
+            else:
+                inst.status = AppStatusEnum.STOPPED.value
+                stopped_containers.append(c.name)
+
+        if len(stopped_containers) == 0:
+            inst.status = AppStatusEnum.RUNNING.value
+
+            instance_statuses.append({
+                "instance": inst,
+                "status": AppStatusEnum(inst.status).name,
+                "target_containers": running_containers,
+                "status_message": "All containers running",
+                "is_error": False
+            })
+        elif len(running_containers) == 0:
+            instance_statuses.append({
+                "instance": inst,
+                "status": AppStatusEnum(inst.status).name,
+                "target_containers": stopped_containers,
+                "status_message": "Containers are stopped",
+                "is_error": False
+            })
+        elif len(stopped_containers) > 0 and len(running_containers) > 0:
+            # This should only happen when running with compose and not
+            # all containers are working
+            inst.status = AppStatusEnum.ERROR.value
+
+            instance_statuses.append({
+                "instance": inst,
+                "status": AppStatusEnum(inst.status).name,
+                "target_containers": stopped_containers,
+                "status_message": "Some containers are not running!",
+                "is_error": True
+            })
+        else:
+            inst.status = AppStatusEnum.ERROR.value
+
+            instance_statuses.append({
+                "instance": inst,
+                "status": AppStatusEnum(inst.status).name,
+                "target_containers": [],
+                "status_message": "AMSYS error. This should never happen.",
+                "is_error": True
+            })
 
     organizations = OrganizationEntity.objects.all()
 
-    proxy_fetch_result = run(["docker", "container", "ls", "--format='{{json .Names}}'"], capture_output=True, text=True)
-    proxy_fetch_string = proxy_fetch_result.stdout
-    proxy_fetch_string = proxy_fetch_string.replace("\"", "")
-    proxy_fetch_string = proxy_fetch_string.replace("\'", "")
-    running_containers = proxy_fetch_string.split("\n")
+    proxy_containers = docker_client.containers.list(filters={
+        "name": "amsys-traefik"
+    })
 
-    is_proxy_running = "amsys-traefik" in running_containers
+    is_proxy_running = len(proxy_containers) == 1
 
     context = {
         "organizations": organizations,
-        "running_instances": running_instances,
-        "stopped_existing_instances": stopped_but_existing,
-        "stopped_nonexistent_instances": stopped_nonexistent,
+        "instance_statuses": instance_statuses,
         "is_proxy_running": is_proxy_running
     }
 
@@ -85,63 +134,9 @@ def create_organization(request):
 
     return HttpResponseRedirect(reverse("index"))
 
-@login_required
-@permission_required("main.add_appinstancemodel")
-def create_app_instance(request):
-    if request.method == "GET":
-        form = forms.AppInstanceForm()
-
-        context = {
-            "form": form
-        }
-
-        return render(request, "create_instance.html", context)
-
-    if request.method != "POST":
-        return HttpResponseRedirect(reverse("index"))
-
-    # Handle POST request
-    form = forms.AppInstanceForm(request.POST)
-
-    if (not form.is_valid()):
-        return render(request, "create_instance.html", { "form": form })
-
-    app_name = form.cleaned_data["app_name"]
-    url_path = form.cleaned_data["url_path"]
+def create_app_from_image(request, form, app_name, url_path, api_token, app_instance, amsys_path, instance_path):
     container_image = form.cleaned_data["container_image"]
-    owner_org = form.cleaned_data["owner_org"]
-    app_title = form.cleaned_data["app_title"]
-    transmit_destinations = form.cleaned_data["transmit_destinations"]
-    template_files = form.cleaned_data["template_files"]
 
-    if (len(url_path) == 0):
-        url_path = app_name
-
-    # TODO: Create custom form validator that ensures the app name and URL path
-    # make sense.
-    app_name = app_name.replace("/", "")
-    
-    if (url_path[0] == "/"):
-        url_path = url_path[1:]
-
-    if (url_path[-1] == "/"):
-        url_path = url_path[:-1]
-
-    datetime_now = datetime.now()
-    api_token = secrets.token_urlsafe(16)
-
-    app_instance = AppInstanceModel(app_name=app_name, url_path=url_path,
-                                    owner_org=owner_org, is_running=True,
-                                    created_at=datetime_now, api_token=api_token)
-    app_instance.save()
-    app_instance.template_files.set(template_files)
-    app_instance.save()
-
-    amsys_path = Path(__file__).resolve().parent.parent
-    default_instance_base = str(amsys_path.parent)
-    instance_path = os.getenv("AMSYS_INSTANCE_BASE_PATH", default_instance_base) + f"/{app_name}"
-
-    dir_vals = request.POST.getlist("dir_entry[]")
     env_keys = request.POST.getlist("env_entry_key[]")
     env_vals = request.POST.getlist("env_entry_val[]")
     label_keys = request.POST.getlist("label_entry_key[]")
@@ -149,21 +144,9 @@ def create_app_instance(request):
     volume_keys = request.POST.getlist("volume_entry_key[]")
     volume_vals = request.POST.getlist("volume_entry_val[]")
 
-    dir_entries = list(dir_vals)
     env_entries = list(zip(env_keys, env_vals))
     label_entries = list(zip(label_keys, label_vals))
     volume_entries = list(zip(volume_keys, volume_vals))
-
-    os.mkdir(instance_path)
-
-    for template_file in template_files:
-        shutil.copy(template_file.filepath, f"{instance_path}/{template_file.filename}")
-
-    # TODO: make sure the user doesn't create any weird directories outside the instance dir
-    for dir_path in dir_entries:
-        path_in_instance = f"{instance_path}/{dir_path}"
-        if not os.path.exists(path_in_instance):
-            os.makedirs(path_in_instance)
 
     env = {
         "AMSYS_APP_NAME": app_name,
@@ -196,14 +179,138 @@ def create_app_instance(request):
         }
 
     docker_client = docker.from_env()
-    docker_client.containers.run(
-        image=container_image,
-        environment=env,
-        labels=labels,
-        volumes=volumes,
-        detach=True,
-        network="amsys-net",
-        name=app_name)
+
+    try:
+        docker_client.containers.run(
+            image=container_image,
+            environment=env,
+            labels=labels,
+            volumes=volumes,
+            detach=True,
+            network="amsys-net",
+            name=app_name)
+    except docker.errors.ImageNotFound:
+        return False
+    except docker.errors.APIError:
+        return False
+
+    return True
+
+def create_app_from_compose(request, instance_path, app_name):
+    compose_file = request.FILES["compose_file"]
+
+    with open(f"{instance_path}/docker-compose.yaml", "wb+") as destination:
+        for chunk in compose_file.chunks():
+            destination.write(chunk)
+
+    # Set the compose project name with -p so it can be used to filter container lists.
+    # This way the compose file can create containers with any name and still the amsys
+    # app can find them.
+    start_compose_result = run(["docker", "compose", "-p", app_name, "up", "-d"], cwd=instance_path, capture_output=True, text=True)
+
+    if start_compose_result.returncode != 0:
+        print(start_compose_result.stdout)
+        print(start_compose_result.stderr)
+        return False
+
+    return True
+
+@login_required
+@permission_required("main.add_appinstancemodel")
+def create_app_instance(request, using_compose=False):
+    if request.method == "GET":
+        form = forms.AppInstanceForm(using_compose=using_compose)
+
+        if not using_compose:
+            return render(request, "create_instance.html", { "form": form })
+        else:
+            return render(request, "create_compose_instance.html", { "form": form })
+
+    if request.method != "POST":
+        return HttpResponseRedirect(reverse("index"))
+
+    # Handle POST request
+    form = forms.AppInstanceForm(request.POST, request.FILES, using_compose=using_compose)
+
+    if (not form.is_valid()):
+        if not using_compose:
+            return render(request, "create_instance.html", { "form": form })
+        else:
+            return render(request, "create_compose_instance.html", { "form": form })
+
+    app_name = form.cleaned_data["app_name"]
+
+    if len(AppInstanceModel.objects.filter(app_name=app_name)) > 0:
+        # TODO: error msg, already exists
+        if not using_compose:
+            return render(request, "create_instance.html", { "form": form })
+        else:
+            return render(request, "create_compose_instance.html", { "form": form })
+
+    url_path = form.cleaned_data["url_path"]
+    owner_org = form.cleaned_data["owner_org"]
+    transmit_destinations = form.cleaned_data["transmit_destinations"]
+    template_files = form.cleaned_data["template_files"]
+
+    if (len(url_path) == 0):
+        url_path = app_name
+
+    # TODO: Create custom form validator that ensures the app name and URL path
+    # make sense.
+    app_name = app_name.replace("/", "")
+    
+    if (url_path[0] == "/"):
+        url_path = url_path[1:]
+
+    if (url_path[-1] == "/"):
+        url_path = url_path[:-1]
+
+    datetime_now = datetime.now()
+    api_token = secrets.token_urlsafe(16)
+
+    app_instance = AppInstanceModel(app_name=app_name, url_path=url_path,
+                                    owner_org=owner_org, status=AppStatusEnum.RUNNING.value,
+                                    created_at=datetime_now, api_token=api_token,
+                                    using_compose=using_compose)
+    app_instance.save()
+    app_instance.template_files.set(template_files)
+    app_instance.save()
+
+    amsys_path = Path(__file__).resolve().parent.parent
+    default_instance_base = str(amsys_path.parent)
+    instance_path = os.getenv("AMSYS_INSTANCE_BASE_PATH", default_instance_base) + f"/{app_name}"
+
+    if not os.path.exists(instance_path):
+        os.mkdir(instance_path)
+
+    for template_file in template_files:
+        shutil.copy(template_file.filepath, f"{instance_path}/{template_file.filename}")
+
+    dir_vals = request.POST.getlist("dir_entry[]")
+    dir_entries = list(dir_vals)
+
+    # TODO: make sure the user doesn't create any weird directories outside the instance dir
+    for dir_path in dir_entries:
+        path_in_instance = f"{instance_path}/{dir_path}"
+        if not os.path.exists(path_in_instance):
+            os.makedirs(path_in_instance)
+
+    started_successfully = False
+
+    if using_compose:
+        started_successfully = create_app_from_compose(request, instance_path, app_name)
+    else:
+        started_successfully = create_app_from_image(request, form, app_name, url_path, api_token, app_instance, amsys_path, instance_path)
+
+    if not started_successfully:
+        # TODO: error msg
+        print("app startup failed")
+        app_instance.delete()
+
+        if not using_compose:
+            return render(request, "create_instance.html", { "form": form })
+        else:
+            return render(request, "create_compose_instance.html", { "form": form })
 
     # Dashboard will always know which instances can transmit to which.
     # Instances should always ask what they can do before trying to do things.
@@ -221,14 +328,14 @@ def stop_instance(request, app_name):
     stop_result = run([
         os.getenv("AMSYS_STOP_INSTANCE_SCRIPT_PATH", "./scripts/stop-instance.sh"),
         app_name
-    ],capture_output=True, text=True)
+    ], capture_output=True, text=True)
 
     if (stop_result.returncode != 0):
         # TODO: Add error message with the message framework
         print(stop_result.stdout)
         return HttpResponseRedirect(reverse("index"))
 
-    instance.is_running = False
+    instance.status = AppStatusEnum.STOPPED.value
     instance.save()
 
     return HttpResponse(status=204)
@@ -245,7 +352,7 @@ def start_instance(request, app_name):
         print(start_result.stdout)
         return HttpResponseRedirect(reverse("index"))
 
-    instance.is_running = True
+    instance.status = AppStatusEnum.RUNNING.value
     instance.save()
 
     return HttpResponse(status=204)
@@ -442,7 +549,7 @@ def available_destinations(request, id):
         return HttpResponseForbidden()
 
     destinations_raw = AppConnectionModel.objects.filter(instance_from=request_instance)
-    destinations_available = destinations_raw.filter(instance_to__is_running=True)
+    destinations_available = destinations_raw.filter(instance_to__status=AppStatusEnum.RUNNING.value)
     destinations = [{ "id": x.instance_to.pk, "app_name": x.instance_to.app_name } for x in destinations_available]
 
     data = {

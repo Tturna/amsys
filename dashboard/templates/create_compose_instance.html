@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <h1>Provisioner Dashboard</h1>
+    <hr>
+    <h2>Create an app instance with Docker Compose</h2>
+    <div class="row">
+        <div class="col-6">
+            <a href="{% url 'create_app_instance' %}"><button class="btn btn-primary">Use Docker Image</button></a>
+            <form action="{% url 'create_app_instance' True %}" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form|crispy }}
+
+                <fieldset id="dir-entries" class="my-5">
+                    <legend class="form-label">Instance directories</legend>
+                    <div class="row justify-content-between">
+                        <label class="form-label col-4">Directory path (relative)</label>
+                        <div class="col-4">
+                            <button id="dir-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
+                        </div>
+                    </div>
+                    <div class="entry d-none">
+                        <div class="row justify-content-between">
+                            <div class="col-4">
+                                <input class="form-control" name="dir_entry[]" type="text" placeholder="mailbox/receive" disabled />
+                            </div>
+                            <div class="col-4 align-self-center">
+                                <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                            </div>
+                        </div>
+                    <div>
+                </fieldset>
+
+                <input class="btn btn-primary" type="submit" value="Create" />
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let dir_entries_div = document.getElementById("dir-entries");
+        let dir_entry = dir_entries_div.querySelector(".entry")
+
+        function handle_add_entry_button(event) {
+            event.preventDefault();
+            const entry = event.target.closest("fieldset").querySelector(".entry");
+            const clone = entry.cloneNode(true);
+            clone.classList.remove("d-none")
+            clone.querySelectorAll("input").forEach(input => {
+                input.value = "";
+                input.disabled = false;
+            });
+            entry.parentNode.appendChild(clone);
+        }
+
+        document.getElementById("dir-add").addEventListener("click", e => handle_add_entry_button(e));
+
+        document.addEventListener("click", function (e) {
+            if (e.target && e.target.classList.contains("remove-entry")) {
+                e.preventDefault();
+                const entry = e.target.closest(".entry");
+
+                if (entry.parentNode.getElementsByClassName("entry").length > 1) {
+                    entry.remove();
+                }
+            }
+        });
+    </script>
+{% endblock %}

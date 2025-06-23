@@ -39,9 +39,12 @@ class AppInstanceForm(forms.ModelForm):
 
     class Meta:
         model = AppInstanceModel
-        fields = [ "app_name", "url_path", "container_image", "app_title", "owner_org", "template_files" ]
+        fields = [ "app_name", "url_path", "owner_org", "template_files" ]
 
     def __init__(self, *args, **kwargs):
+        self.using_compose = kwargs.get("using_compose", False)
+        kwargs.pop("using_compose", None)
+
         super().__init__(*args, **kwargs)
 
         update_instance_template_file_selection()
@@ -50,7 +53,14 @@ class AppInstanceForm(forms.ModelForm):
         if (instance_arg):
             self.instance = instance_arg
 
-        self.uneditable_fields = ["app_name", "url_path", "container_image", "app_title", "template_files"]
+        self.uneditable_fields = ["app_name", "url_path", "template_files"]
+
+        if self.using_compose:
+            self.fields["compose_file"] = forms.FileField(label="Docker compose YAML file", widget=forms.FileInput(attrs={"accept": ".yaml, .yml"}))
+            self.order_fields([ "app_name", "url_path", "owner_org", "compose_file", "template_files" ])
+        else:
+            self.fields["container_image"] = forms.CharField(label="Docker container image name", max_length=50, strip=True, help_text="e.g. addman, nginx:1.27, debian:bookworm")
+            self.order_fields([ "app_name", "url_path", "owner_org", "container_image", "template_files" ])
 
         # If form is created from an existing model (editing form)
         if self.instance and self.instance.pk:

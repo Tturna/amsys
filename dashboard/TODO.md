@@ -1,15 +1,17 @@
 # TODO
 
 Generalize app instance creation to support other kinds of apps.
-- Don't force the user to give a container image when creating app instance
-- Support running docker compose along with individual container images
 - Let the user upload files to instance_template_files or add them manually
   with access to the server.
-- Let the user select files to copy to the instance folder from instance_template_files.
 - Let the user upload/write a custom bash script that will be executed before running
   the app instance. This lets them do whatever is lacking support in the amsys app.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
+
+Message framework.
+
+Make the app list understand compose based apps.
+Add instructions and validation for compose files.
 
 Make the dynamic form inputs of app creation (like labels, env, volumes...) part of
 the form model so the changes persist across a page reload and can be used for
@@ -20,6 +22,7 @@ the ADDMAN name.
 
 Application creation presets (ADDMAN, RAPiD-e, option to add custom)
 
-Message framework.
+Make it so the index page, view instance page etc. don't hard code the instance domain
+to localhost.
 
 App name validation in instance creation form.
