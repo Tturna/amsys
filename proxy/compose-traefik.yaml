@@ -9,7 +9,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./traefik.yaml:/etc/traefik/traefik.yaml
     networks:
-      - addman-testing-net
+      - amsys-net
 networks:
-  addman-testing-net:
+  amsys-net:
     external: true
