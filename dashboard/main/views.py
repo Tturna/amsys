@@ -2,6 +2,7 @@ from django.shortcuts import render, reverse, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, HttpResponseForbidden, JsonResponse
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
 from .models import AppInstanceModel, AppConnectionModel, OrganizationEntity, AppStatusEnum
 from . import forms
 
@@ -160,6 +161,7 @@ def create_organization(request):
 
             return HttpResponseRedirect(reverse("index"))
         else:
+            messages.error(request, "Invalid form")
             return render(request, "create_organization.html", { "form": form })
 
     return HttpResponseRedirect(reverse("index"))
@@ -265,6 +267,7 @@ def create_app_instance(request, using_compose=False):
     form = forms.AppInstanceForm(request.POST, request.FILES, using_compose=using_compose)
 
     if (not form.is_valid()):
+        messages.error(request, "Invalid form")
         if not using_compose:
             return render(request, "create_instance.html", { "form": form })
         else:
@@ -273,7 +276,8 @@ def create_app_instance(request, using_compose=False):
     app_name = form.cleaned_data["app_name"]
 
     if len(AppInstanceModel.objects.filter(app_name=app_name)) > 0:
-        # TODO: error msg, already exists
+        messages.error(request, f"App with name '{app_name}' already exists.")
+
         if not using_compose:
             return render(request, "create_instance.html", { "form": form })
         else:
@@ -331,7 +335,7 @@ def create_app_instance(request, using_compose=False):
         started_successfully = create_app_from_image(request, form, app_name, url_path, api_token, app_instance, instance_path)
 
     if not started_successfully:
-        # TODO: error msg
+        messages.error(request, "App didn't start succesfully")
         print("app startup failed")
         app_instance.delete()
 
@@ -346,6 +350,7 @@ def create_app_instance(request, using_compose=False):
         connection = AppConnectionModel(instance_from=app_instance, instance_to=dest)
         connection.save()
 
+    messages.success(request, "App started successfully")
     return HttpResponseRedirect(reverse("index"))
 
 @login_required
@@ -360,12 +365,23 @@ def stop_instance(request, app_name):
         stop_compose_result = run(["docker", "compose", "-p", app_name, "stop"], cwd=instance_path, capture_output=True, text=True)
 
         if stop_compose_result.returncode != 0:
+            messages.error(request, f"App failed to stop. Error code {stop_compose_result.returncode}")
             print(stop_compose_result.stdout)
             print(stop_compose_result.stderr)
             return HttpResponseRedirect(reverse("index"))
     else:
-        app_container = docker_client.containers.get(app_name)
-        app_container.stop()
+        try:
+            app_container = docker_client.containers.get(app_name)
+            app_container.stop()
+        except docker.errors.NotFound:
+            messages.error(request, "App container not found! Some data may be lost.")
+            instance.status = AppStatusEnum.MISSING.value
+            instance.save()
+
+            return HttpResponse(status=204)
+        except docker.errors.APIError:
+            messages.error(request, "Container API error. Try again later.")
+            return HttpResponse(status=500)
 
     instance.status = AppStatusEnum.STOPPED.value
     instance.save()
@@ -384,12 +400,23 @@ def start_instance(request, app_name):
         start_compose_result = run(["docker", "compose", "-p", app_name, "start"], cwd=instance_path, capture_output=True, text=True)
 
         if start_compose_result.returncode != 0:
+            messages.error(request, f"Failed to start instance. Error code {start_compose_result.returncode}")
             print(start_compose_result.stdout)
             print(start_compose_result.stderr)
             return HttpResponseRedirect(reverse("index"))
     else:
-        app_container = docker_client.containers.get(app_name)
-        app_container.start()
+        try:
+            app_container = docker_client.containers.get(app_name)
+            app_container.start()
+        except docker.errors.NotFound:
+            messages.error(request, "App container not found! Some data may be lost.")
+            instance.status = AppStatusEnum.MISSING.value
+            instance.save()
+
+            return HttpResponse(status=204)
+        except docker.errors.APIError:
+            messages.error(request, "Container API error. Try again later.")
+            return HttpResponse(status=500)
 
     instance.status = AppStatusEnum.RUNNING.value
     instance.save()
@@ -408,12 +435,23 @@ def restart_instance(request, app_name):
         remove_compose_result = run(["docker", "compose", "-p", app_name, "kill"], cwd=instance_path, capture_output=True, text=True)
 
         if remove_compose_result.returncode != 0:
+            messages.error(request, f"Failed to restart instance. Error code {remove_compose_result.returncode}")
             print(remove_compose_result.stdout)
             print(remove_compose_result.stderr)
             return HttpResponseRedirect(reverse("index"))
     else:
-        app_container = docker_client.containers.get(app_name)
-        app_container.remove(v=True, force=True)
+        try:
+            app_container = docker_client.containers.get(app_name)
+            app_container.remove(v=True, force=True)
+        except docker.errors.NotFound:
+            messages.error(request, "App container not found! Some data may be lost.")
+            instance.status = AppStatusEnum.MISSING.value
+            instance.save()
+
+            return HttpResponse(status=204)
+        except docker.errors.APIError:
+            messages.error(request, "Container API error. Try again later.")
+            return HttpResponse(status=500)
 
     # TODO: Ensure the app name can't change the instance path to something weird
     shutil.rmtree(instance_path)
@@ -435,12 +473,23 @@ def remove_instance(request, app_name):
         remove_compose_result = run(["docker", "compose", "-p", app_name, "down"], cwd=instance_path, capture_output=True, text=True)
 
         if remove_compose_result.returncode != 0:
+            messages.error(request, f"Failed to remove instance. Error code {remove_compose_result.returncode}")
             print(remove_compose_result.stdout)
             print(remove_compose_result.stderr)
             return HttpResponseRedirect(reverse("index"))
     else:
-        app_container = docker_client.containers.get(app_name)
-        app_container.remove(v=True, force=True)
+        try:
+            app_container = docker_client.containers.get(app_name)
+            app_container.remove(v=True, force=True)
+        except docker.errors.NotFound:
+            messages.error(request, "App container not found! Some data may be lost.")
+            instance.status = AppStatusEnum.MISSING.value
+            instance.save()
+
+            return HttpResponse(status=204)
+        except docker.errors.APIError:
+            messages.error(request, "Container API error. Try again later.")
+            return HttpResponse(status=500)
 
     # TODO: Ensure the app name can't change the instance path to something weird
     shutil.rmtree(instance_path)
@@ -502,6 +551,15 @@ def edit_instance(request, app_name):
 
             # Prevent double posting and stuff
             return HttpResponseRedirect(reverse("edit_instance", args=[instance.app_name]))
+        else:
+            messages.error(request, "Invalid form")
+
+            context = {
+                "instance": instance,
+                "form": form
+            }
+
+            return render(request, "edit_instance.html", context)
     else:
         return HttpResponseRedirect(reverse("index"))
 
@@ -526,6 +584,16 @@ def map(request):
 @login_required
 def proxy(request):
     proxy_fetch_result = run(["docker", "container", "ls", "--format='{{json .Names}}'"], capture_output=True, text=True)
+
+    if (proxy_fetch_result.returncode != 0):
+        messages.error(request, "Failed to fetch proxy status.")
+
+        context = {
+            "is_proxy_running": False
+        }
+
+        return render(request, "proxy.html", context)
+
     proxy_fetch_string = proxy_fetch_result.stdout
     proxy_fetch_string = proxy_fetch_string.replace("\"", "")
     proxy_fetch_string = proxy_fetch_string.replace("\'", "")
@@ -546,7 +614,7 @@ def start_proxy(request):
 
     print(start_result.stdout)
     if (start_result.returncode != 0):
-        # TODO: Add error message with the message framework
+        messages.error(request, f"Proxy failed to start. Error code {start_result.returncode}")
         return HttpResponseRedirect(reverse("index"))
 
     return HttpResponse(status=204)
@@ -557,7 +625,7 @@ def stop_proxy(request):
     stop_result = run(["./scripts/stop-proxy.sh"], capture_output=True, text=True)
 
     if (stop_result.returncode != 0):
-        # TODO: Add error message with the message framework
+        messages.error(request, f"Proxy failed to stop. Error code {stop_result.returncode}")
         print(stop_result.stdout)
         return HttpResponseRedirect(reverse("index"))
 

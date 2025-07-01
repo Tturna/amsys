@@ -8,8 +8,6 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
-Message framework.
-
 Add instructions and validation for compose files.
 
 Make the dynamic form inputs of app creation (like labels, env, volumes...) part of
