@@ -52,3 +52,16 @@ class AppInstanceModel(models.Model):
 class AppConnectionModel(models.Model):
     instance_from = models.ForeignKey(AppInstanceModel, on_delete=models.CASCADE, related_name="instance_from")
     instance_to = models.ForeignKey(AppInstanceModel, on_delete=models.CASCADE, related_name="instance_to")
+
+class AppPresetModel(models.Model):
+    preset_name = models.CharField(max_length=20, verbose_name="Preset name")
+    container_image = models.CharField(max_length=20)
+    template_files = models.ManyToManyField(TemplateFileModel)
+    # These should contain JSON formatted data:
+    instance_directories = models.CharField(max_length=1024, blank=True)
+    instance_labels = models.CharField(max_length=1024, blank=True)
+    instance_volumes = models.CharField(max_length=1024, blank=True)
+    instance_environment_variables = models.CharField(max_length=1024, blank=True)
+
+    def __str__(self):
+        return str(self.preset_name)

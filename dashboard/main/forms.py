@@ -1,6 +1,6 @@
 from django import forms
 from django.conf import settings
-from .models import OrganizationEntity, AppInstanceModel, TemplateFileModel
+from .models import OrganizationEntity, AppInstanceModel, TemplateFileModel, AppPresetModel
 import os
 
 class OrganizationEntityForm(forms.ModelForm):
@@ -39,11 +39,20 @@ class AppInstanceForm(forms.ModelForm):
 
     class Meta:
         model = AppInstanceModel
-        fields = [ "app_name", "url_path", "owner_org" ]
+        fields = ["app_name", "url_path", "owner_org", "instance_directories",
+                  "instance_labels", "instance_volumes", "instance_environment_variables"]
+        widgets = {
+            "instance_directories": forms.HiddenInput(),
+            "instance_labels": forms.HiddenInput(),
+            "instance_volumes": forms.HiddenInput(),
+            "instance_environment_variables": forms.HiddenInput(),
+        }
 
     def __init__(self, *args, **kwargs):
         self.using_compose = kwargs.get("using_compose", False)
+        self.create_new_preset = kwargs.get("create_new_preset", False)
         kwargs.pop("using_compose", None)
+        kwargs.pop("create_new_preset", None)
 
         super().__init__(*args, **kwargs)
 
@@ -68,11 +77,11 @@ class AppInstanceForm(forms.ModelForm):
             # Don't show compose file or container image fields when editing. They can't be changed anyway.
             if self.using_compose:
                 self.fields["compose_file"] = forms.FileField(label="Docker compose YAML file", widget=forms.FileInput(attrs={"accept": ".yaml, .yml"}))
-                self.order_fields([ "app_name", "url_path", "owner_org", "compose_file", "template_files" ])
+                self.order_fields(["app_name", "url_path", "owner_org", "compose_file", "template_files"])
             else:
                 self.fields["container_image"] = forms.CharField(label="Docker container image name", max_length=50, strip=True, help_text="e.g. addman, nginx:1.27, debian:bookworm")
-                self.order_fields([ "app_name", "url_path", "owner_org", "container_image", "template_files" ])
 
+                self.order_fields(["app_name", "url_path", "owner_org", "container_image", "template_files"])
 
     def clean(self):
         cleaned_data = super().clean()
@@ -91,3 +100,33 @@ class AppInstanceForm(forms.ModelForm):
                     cleaned_data[field] = old_value
 
         return cleaned_data
+
+class AppPresetForm(forms.Form):
+    preset = forms.ModelChoiceField(queryset=AppPresetModel.objects.all(), empty_label="No preset", required=False)
+
+    # The "preset" field should have the preset objects as available choices as well as
+    # an always available default choice, "New preset", which is not an object. Choosing this
+    # will break the default validation. Django automatically calls "clean_<fieldname>" for all
+    # fields, but only after calling the default validators for the field, which are the part
+    # that cause the validation error in our use case. For this reason, we have to override
+    # the field's "clean" method. There may be a more sensible way, but this is my understanding.
+    # Source (literally): https://github.com/django/django/blob/main/django/forms/forms.py
+    @staticmethod
+    def generate_preset_cleaner(default_clean_method):
+        def clean_preset(raw_value):
+            if raw_value == "new preset":
+                return raw_value
+            else:
+                return default_clean_method(raw_value)
+        return clean_preset
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["preset"].clean = AppPresetForm.generate_preset_cleaner(self.fields["preset"].clean)
+
+        choices = list(self.fields["preset"].choices)
+        insert_index = len(choices)
+        # TODO: Consider using a "stickier" value like some constant defined in settings.py
+        # or something instead of "new preset".
+        choices.insert(insert_index, ("new preset", "New preset"))
+        self.fields["preset"].choices = choices

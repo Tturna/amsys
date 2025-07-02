@@ -8,108 +8,144 @@
     <div class="row">
         <div class="col-6">
             <a href="{% url 'create_app_instance' True %}"><button class="btn btn-primary">Use Docker Compose</button></a>
+
+            {% if preset_form %}
+            <form action="{% url 'apply_preset' %}" method="POST" id="preset_form">
+                {% csrf_token %}
+                {{ preset_form|crispy }}
+            </form>
+            {% endif %}
+
             <form action="{% url 'create_app_instance' %}" method="POST">
                 {% csrf_token %}
                 {{ form|crispy }}
 
-                <fieldset id="dir-entries" class="my-5">
-                    <legend class="form-label">Instance directories</legend>
-                    <div class="row justify-content-between">
-                        <label class="form-label col-4">Directory path (relative)</label>
-                        <div class="col-4">
-                            <button id="dir-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
-                        </div>
-                    </div>
-                    <div class="entry d-none">
+                <button id="toggle_advanced" class="btn btn-sm btn-secondary">Advanced settings</button>
+                <div id="advanced" class="d-none">
+                    <fieldset id="dir-entries" class="my-5">
+                        <legend class="form-label">Instance directories</legend>
                         <div class="row justify-content-between">
+                            <label class="form-label col-4">Directory path (relative)</label>
                             <div class="col-4">
-                                <input class="form-control" name="dir_entry[]" type="text" placeholder="mailbox/receive" disabled />
-                            </div>
-                            <div class="col-4 align-self-center">
-                                <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                <button id="dir-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
                             </div>
                         </div>
-                    <div>
-                </fieldset>
+                        <div class="entry d-none">
+                            <div class="row justify-content-between">
+                                <div class="col-4">
+                                    <input class="form-control" name="dir_entry[]" type="text" placeholder="mailbox/receive" disabled />
+                                </div>
+                                <div class="col-4 align-self-center">
+                                    <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                </div>
+                            </div>
+                        <div>
+                    </fieldset>
 
-                <fieldset id="label-entries" class="my-5">
-                    <legend class="form-label">Container labels</legend>
-                    <div class="row">
-                        <label class="form-label col-4">Label</label>
-                        <label class="form-label col-4">Value</label>
-                        <div class="col-4">
-                            <button id="label-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
-                        </div>
-                    </div>
-                    <div class="entry d-none">
+                    <fieldset id="label-entries" class="my-5">
+                        <legend class="form-label">Container labels</legend>
                         <div class="row">
+                            <label class="form-label col-4">Label</label>
+                            <label class="form-label col-4">Value</label>
                             <div class="col-4">
-                                <input class="form-control" name="label_entry_key[]" type="text" placeholder="traefik.enable" disabled />
-                            </div>
-                            <div class="col-4">
-                                <input class="form-control" name="label_entry_val[]" type="text" placeholder="true" disabled />
-                            </div>
-                            <div class="col-4 align-self-center">
-                                <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                <button id="label-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
                             </div>
                         </div>
-                    <div>
-                </fieldset>
+                        <div class="entry d-none">
+                            <div class="row">
+                                <div class="col-4">
+                                    <input class="form-control" name="label_entry_key[]" type="text" placeholder="traefik.enable" disabled />
+                                </div>
+                                <div class="col-4">
+                                    <input class="form-control" name="label_entry_val[]" type="text" placeholder="true" disabled />
+                                </div>
+                                <div class="col-4 align-self-center">
+                                    <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                </div>
+                            </div>
+                        <div>
+                    </fieldset>
 
-                <fieldset id="volume-entries" class="my-5">
-                    <legend class="form-label">Container volumes</legend>
-                    <div class="row">
-                        <label class="form-label col-4">Source (relative)</label>
-                        <label class="form-label col-4">Destination (absolute)</label>
-                        <div class="col-4">
-                            <button id="volume-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
-                        </div>
-                    </div>
-                    <div class="entry d-none">
+                    <fieldset id="volume-entries" class="my-5">
+                        <legend class="form-label">Container volumes</legend>
                         <div class="row">
+                            <label class="form-label col-4">Source (relative)</label>
+                            <label class="form-label col-4">Destination (absolute)</label>
                             <div class="col-4">
-                                <input class="form-control" name="volume_entry_key[]" type="text" placeholder="config/site-config.json" disabled />
-                            </div>
-                            <div class="col-4">
-                                <input class="form-control" name="volume_entry_val[]" type="text" placeholder="app/site-config.json" disabled />
-                            </div>
-                            <div class="col-4 align-self-center">
-                                <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                <button id="volume-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
                             </div>
                         </div>
-                    </div>
-                </fieldset>
+                        <div class="entry d-none">
+                            <div class="row">
+                                <div class="col-4">
+                                    <input class="form-control" name="volume_entry_key[]" type="text" placeholder="config/site-config.json" disabled />
+                                </div>
+                                <div class="col-4">
+                                    <input class="form-control" name="volume_entry_val[]" type="text" placeholder="app/site-config.json" disabled />
+                                </div>
+                                <div class="col-4 align-self-center">
+                                    <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
 
-                <fieldset id="env-entries" class="my-5">
-                    <legend class="form-label">Container environment variables</legend>
-                    <div class="row">
-                        <label class="form-label col-4">Key</label>
-                        <label class="form-label col-4">Value</label>
-                        <div class="col-4">
-                            <button id="env-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
-                        </div>
-                    </div>
-                    <div class="entry d-none">
+                    <fieldset id="env-entries" class="my-5">
+                        <legend class="form-label">Container environment variables</legend>
                         <div class="row">
+                            <label class="form-label col-4">Key</label>
+                            <label class="form-label col-4">Value</label>
                             <div class="col-4">
-                                <input class="form-control" name="env_entry_key[]" type="text" placeholder="USERNAME" disabled />
-                            </div>
-                            <div class="col-4">
-                                <input class="form-control" name="env_entry_val[]" type="text" placeholder="Example" disabled />
-                            </div>
-                            <div class="col-4 align-self-center">
-                                <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                <button id="env-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
                             </div>
                         </div>
-                    </div>
-                </fieldset>
+                        <div class="entry d-none">
+                            <div class="row">
+                                <div class="col-4">
+                                    <input class="form-control" name="env_entry_key[]" type="text" placeholder="USERNAME" disabled />
+                                </div>
+                                <div class="col-4">
+                                    <input class="form-control" name="env_entry_val[]" type="text" placeholder="Example" disabled />
+                                </div>
+                                <div class="col-4 align-self-center">
+                                    <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
 
-                <input class="btn btn-primary" type="submit" value="Create" />
+                    <input class="btn btn-primary" type="submit" value="Create" />
+                </div>
             </form>
         </div>
     </div>
 
+    {% comment %}
+    TODO: This script has bloated. Put it in its own file(s).
+    {% endcomment %}
     <script>
+        const advanced_div = document.getElementById("advanced");
+        document.getElementById("toggle_advanced").addEventListener("click", e => {
+            e.preventDefault();
+
+            if (advanced_div.classList.contains("d-none")) {
+                advanced_div.classList.remove("d-none");
+            } else {
+                advanced_div.classList.add("d-none");
+            }
+        });
+
+        // Preset auto-submit
+        const preset_form = document.getElementById("preset_form");
+        const preset_select = document.getElementById("id_preset");
+
+        if (preset_form && preset_select) {
+            preset_select.addEventListener("change", (e) => {
+                preset_form.submit();
+            });
+        }
+
+        // Handle dynamic input fields:
         // Entry parents
         let dir_entries_div = document.getElementById("dir-entries");
         let label_entries_div = document.getElementById("label-entries");
@@ -123,16 +159,32 @@
         let env_entry = env_entries_div.querySelector(".entry")
 
         // Clone entry, enable it and show it
-        function handle_add_entry_button(event) {
-            event.preventDefault();
-            const entry = event.target.closest("fieldset").querySelector(".entry");
-            const clone = entry.cloneNode(true);
+        function add_entry(hidden_entry, value, key) {
+            const clone = hidden_entry.cloneNode(true);
             clone.classList.remove("d-none")
             clone.querySelectorAll("input").forEach(input => {
                 input.value = "";
                 input.disabled = false;
             });
-            entry.parentNode.appendChild(clone);
+            hidden_entry.parentNode.appendChild(clone);
+
+            if (!value && !key) return;
+
+            // Prepopulate
+            input_fields = clone.querySelectorAll("input");
+
+            if (key) {
+                input_fields[0].value = key;
+                input_fields[1].value = value;
+            } else {
+                input_fields[0].value = value;
+            }
+        }
+
+        function handle_add_entry_button(event) {
+            event.preventDefault();
+            const entry = event.target.closest("fieldset").querySelector(".entry");
+            add_entry(entry);
         }
 
         document.getElementById("dir-add").addEventListener("click", e => handle_add_entry_button(e));
@@ -152,5 +204,52 @@
                 }
             }
         });
+
+        // Populate dynamic fields from preset
+        const init_dirs_string = document.getElementById("id_instance_directories").value;
+        const init_labels_string = document.getElementById("id_instance_labels").value;
+        const init_volumes_string = document.getElementById("id_instance_volumes").value;
+        const init_env_string = document.getElementById("id_instance_environment_variables").value;
+
+        const hidden_dir_entry = dir_entries_div.querySelector(".entry");
+        const hidden_label_entry = label_entries_div.querySelector(".entry");
+        const hidden_volume_entry = volume_entries_div.querySelector(".entry");
+        const hidden_env_entry = env_entries_div.querySelector(".entry");
+
+        let init_dirs;
+        let init_labels;
+        let init_volumes;
+        let init_env;
+
+        if (init_dirs_string) {
+            init_dirs = JSON.parse(init_dirs_string);
+            init_dirs.forEach(dir => {
+                add_entry(hidden_dir_entry, dir);
+            });
+        }
+
+        if (init_labels_string) {
+            init_labels = JSON.parse(init_labels_string);
+
+            for (const [key, value] of Object.entries(init_labels)) {
+                add_entry(hidden_label_entry, value, key);
+            }
+        }
+
+        if (init_volumes_string) {
+            init_volumes = JSON.parse(init_volumes_string);
+
+            for (const [key, value] of Object.entries(init_volumes)) {
+                add_entry(hidden_volume_entry, value, key);
+            }
+        }
+
+        if (init_env_string) {
+            init_env = JSON.parse(init_env_string);
+
+            for (const [key, value] of Object.entries(init_env)) {
+                add_entry(hidden_env_entry, value, key);
+            }
+        }
     </script>
 {% endblock %}

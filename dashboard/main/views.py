@@ -3,7 +3,8 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllow
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
-from .models import AppInstanceModel, AppConnectionModel, OrganizationEntity, AppStatusEnum
+from django import forms as django_forms
+from .models import AppInstanceModel, AppConnectionModel, AppPresetModel, OrganizationEntity, AppStatusEnum
 from . import forms
 
 from subprocess import run
@@ -131,7 +132,6 @@ def get_instance_statuses(instances=None):
     return instance_statuses
 
 def index(request):
-    docker_client = docker.from_env()
     instance_statuses = get_instance_statuses()
     organizations = OrganizationEntity.objects.all()
 
@@ -147,8 +147,6 @@ def view_organization(request, org_name):
     organization = get_object_or_404(OrganizationEntity, org_name=org_name)
     connected_apps = AppInstanceModel.objects.filter(owner_org=organization)
     instance_statuses = get_instance_statuses(instances=connected_apps)
-
-    print(instance_statuses)
 
     context = {
         "org": organization,
@@ -180,7 +178,7 @@ def create_organization(request):
 
     return HttpResponseRedirect(reverse("index"))
 
-def create_app_from_image(request, form, app_name, url_path, api_token, app_instance, instance_path):
+def create_app_from_image(request, form, app_name, url_path, api_token, app_instance, instance_path, template_files):
     container_image = form.cleaned_data["container_image"]
 
     env_keys = request.POST.getlist("env_entry_key[]")
@@ -189,6 +187,8 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
     label_vals = request.POST.getlist("label_entry_val[]")
     volume_keys = request.POST.getlist("volume_entry_key[]")
     volume_vals = request.POST.getlist("volume_entry_val[]")
+
+    preset_name = request.POST.get("preset_name", None)
 
     env_entries = list(zip(env_keys, env_vals))
     label_entries = list(zip(label_keys, label_vals))
@@ -283,6 +283,18 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
 
         return False
 
+    if preset_name is not None:
+        preset = AppPresetModel(
+            preset_name=preset_name,
+            container_image=container_image,
+            instance_directories=app_instance.instance_directories,
+            instance_labels=app_instance.instance_labels,
+            instance_volumes=app_instance.instance_volumes,
+            instance_environment_variables=app_instance.instance_environment_variables)
+
+        preset.save()
+        preset.template_files.set(template_files)
+
     return True
 
 def create_app_from_compose(request, instance_path, app_name):
@@ -308,12 +320,44 @@ def create_app_from_compose(request, instance_path, app_name):
 @permission_required("main.add_appinstancemodel")
 def create_app_instance(request, using_compose=False):
     if request.method == "GET":
-        form = forms.AppInstanceForm(using_compose=using_compose)
+        init_preset = request.session.get("preset", None)
+        form = None
+        preset_form = None
+
+        if init_preset:
+            if init_preset != "new preset":
+                preset = get_object_or_404(AppPresetModel, pk=init_preset)
+                form = forms.AppInstanceForm(initial={
+                        "container_image": preset.container_image,
+                        "template_files": preset.template_files.all(),
+                        "instance_directories": preset.instance_directories,
+                        "instance_labels": preset.instance_labels,
+                        "instance_volumes": preset.instance_volumes,
+                        "instance_environment_variables": preset.instance_environment_variables
+                    },
+                    using_compose=False)
+            else:
+                form = forms.AppInstanceForm(using_compose=using_compose)
+                form.fields["preset_name"] = django_forms.CharField(max_length=20, required=True)
+                form.order_fields(["preset_name"])
+
+            preset_form = forms.AppPresetForm({"preset": init_preset})
+            del request.session["preset"]
+        elif not using_compose:
+            preset_form = forms.AppPresetForm()
+
+        if form is None:
+            form = forms.AppInstanceForm(using_compose=using_compose)
+
+        context = {
+            "form": form,
+            "preset_form": preset_form
+        }
 
         if not using_compose:
-            return render(request, "create_instance.html", { "form": form })
+            return render(request, "create_instance.html", context)
         else:
-            return render(request, "create_compose_instance.html", { "form": form })
+            return render(request, "create_compose_instance.html", context)
 
     if request.method != "POST":
         return HttpResponseRedirect(reverse("index"))
@@ -366,7 +410,6 @@ def create_app_instance(request, using_compose=False):
     app_instance.save()
     app_instance.template_files.set(template_files)
 
-    amsys_path = get_amsys_path()
     instance_path = get_instance_path(app_name)
 
     for template_file in template_files:
@@ -389,7 +432,7 @@ def create_app_instance(request, using_compose=False):
     if using_compose:
         started_successfully = create_app_from_compose(request, instance_path, app_name)
     else:
-        started_successfully = create_app_from_image(request, form, app_name, url_path, api_token, app_instance, instance_path)
+        started_successfully = create_app_from_image(request, form, app_name, url_path, api_token, app_instance, instance_path, template_files)
 
     if not started_successfully:
         messages.error(request, "App didn't start succesfully")
@@ -409,6 +452,21 @@ def create_app_instance(request, using_compose=False):
 
     messages.success(request, "App started successfully")
     return HttpResponseRedirect(reverse("index"))
+
+def apply_preset(request):
+    preset_form = forms.AppPresetForm(request.POST)
+
+    if preset_form.is_valid():
+        preset = preset_form.cleaned_data["preset"]
+
+        if isinstance(preset, AppPresetModel):
+            request.session["preset"] = preset.pk
+        else:
+            request.session["preset"] = preset
+    else:
+        messages.error(request, "Invalid preset")
+
+    return HttpResponseRedirect(reverse("create_app_instance"))
 
 @login_required
 @permission_required("main.change_appinstancemodel")
