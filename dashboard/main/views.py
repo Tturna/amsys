@@ -200,8 +200,17 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
         "AMSYS_APP_ID": str(app_instance.pk)
     }
 
+    env_json_string = "{"
+
     for entry in env_entries:
         env[entry[0]] = entry[1]
+        env_json_string += f"\"{entry[0]}\": \"{entry[1]}\","
+
+    # Replace last comma with closing curly brace
+    if env_json_string[-1:] == ",":
+        env_json_string = env_json_string[:-1]
+
+    env_json_string += "}"
 
     labels = {
         "traefik.enable": "true",
@@ -211,8 +220,16 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
         f"traefik.http.routers.{app_name}-router.middlewares": f"{app_name}-strip@docker"
     }
 
+    labels_json_string = "{"
+
     for entry in label_entries:
         labels[entry[0]] = entry[1]
+        labels_json_string += f"\"{entry[0]}\": \"{entry[1]}\","
+
+    if labels_json_string[-1:] == ",":
+        labels_json_string = labels_json_string[:-1]
+
+    labels_json_string += "}"
 
     amsys_path = get_amsys_path()
 
@@ -220,11 +237,24 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
         f"{amsys_path}/ssh/instance_ca.pub": { "bind": "/etc/ssh/instance_ca.pub", "mode": "ro" }
     }
 
+    volumes_json_string = "{"
+
     for entry in volume_entries:
         volumes[f"{instance_path}/{entry[0]}"] = {
             "bind": entry[1],
             "mode": "rw"
         }
+        volumes_json_string += f"\"{entry[0]}\": \"{entry[1]}\","
+
+    if volumes_json_string[-1:] == ",":
+        volumes_json_string = volumes_json_string[:-1]
+
+    volumes_json_string += "}"
+
+    app_instance.instance_environment_variables = env_json_string
+    app_instance.instance_labels = labels_json_string
+    app_instance.instance_volumes = volumes_json_string
+    app_instance.save()
 
     docker_client = docker.from_env()
 
@@ -239,8 +269,18 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
             user="remote:sftpusers",
             name=app_name)
     except docker.errors.ImageNotFound:
+        print(f"Container image '{container_image}' not found.")
         return False
-    except docker.errors.APIError:
+    except docker.errors.APIError as e:
+        print("Docker API error:")
+        print(e)
+
+        try:
+            app_container = docker_client.containers.get(app_name)
+            app_container.remove(force=True)
+        except:
+            pass
+
         return False
 
     return True
@@ -325,7 +365,6 @@ def create_app_instance(request, using_compose=False):
                                     using_compose=using_compose)
     app_instance.save()
     app_instance.template_files.set(template_files)
-    app_instance.save()
 
     amsys_path = get_amsys_path()
     instance_path = get_instance_path(app_name)
@@ -335,6 +374,9 @@ def create_app_instance(request, using_compose=False):
 
     dir_vals = request.POST.getlist("dir_entry[]")
     dir_entries = list(dir_vals)
+
+    app_instance.instance_directories = str(dir_entries)
+    app_instance.save()
 
     # TODO: make sure the user doesn't create any weird directories outside the instance dir
     for dir_path in dir_entries:

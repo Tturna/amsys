@@ -40,6 +40,11 @@ class AppInstanceModel(models.Model):
     created_at = models.DateTimeField()
     api_token = models.CharField(max_length=20)
     using_compose = models.BooleanField()
+    # These should contain JSON formatted data:
+    instance_directories = models.CharField(max_length=1024, blank=True)
+    instance_labels = models.CharField(max_length=1024, blank=True)
+    instance_volumes = models.CharField(max_length=1024, blank=True)
+    instance_environment_variables = models.CharField(max_length=1024, blank=True)
 
     def __str__(self):
         return str(self.app_name)
