@@ -39,7 +39,7 @@ class AppInstanceForm(forms.ModelForm):
 
     class Meta:
         model = AppInstanceModel
-        fields = [ "app_name", "url_path", "owner_org", "template_files" ]
+        fields = [ "app_name", "url_path", "owner_org" ]
 
     def __init__(self, *args, **kwargs):
         self.using_compose = kwargs.get("using_compose", False)
@@ -55,13 +55,6 @@ class AppInstanceForm(forms.ModelForm):
 
         self.uneditable_fields = ["app_name", "url_path", "template_files"]
 
-        if self.using_compose:
-            self.fields["compose_file"] = forms.FileField(label="Docker compose YAML file", widget=forms.FileInput(attrs={"accept": ".yaml, .yml"}))
-            self.order_fields([ "app_name", "url_path", "owner_org", "compose_file", "template_files" ])
-        else:
-            self.fields["container_image"] = forms.CharField(label="Docker container image name", max_length=50, strip=True, help_text="e.g. addman, nginx:1.27, debian:bookworm")
-            self.order_fields([ "app_name", "url_path", "owner_org", "container_image", "template_files" ])
-
         # If form is created from an existing model (editing form)
         if self.instance and self.instance.pk:
             self.fields["transmit_destinations"].queryset = AppInstanceModel.objects.exclude(app_name=self.instance.app_name)
@@ -71,6 +64,15 @@ class AppInstanceForm(forms.ModelForm):
                 # Make uneditable fields get past validation
                 # as their POST values will be empty at that point
                 self.fields[field].required = False
+        else:
+            # Don't show compose file or container image fields when editing. They can't be changed anyway.
+            if self.using_compose:
+                self.fields["compose_file"] = forms.FileField(label="Docker compose YAML file", widget=forms.FileInput(attrs={"accept": ".yaml, .yml"}))
+                self.order_fields([ "app_name", "url_path", "owner_org", "compose_file", "template_files" ])
+            else:
+                self.fields["container_image"] = forms.CharField(label="Docker container image name", max_length=50, strip=True, help_text="e.g. addman, nginx:1.27, debian:bookworm")
+                self.order_fields([ "app_name", "url_path", "owner_org", "container_image", "template_files" ])
+
 
     def clean(self):
         cleaned_data = super().clean()

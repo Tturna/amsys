@@ -23,3 +23,7 @@ Make it so the index page, view instance page etc. don't hard code the instance 
 to localhost.
 
 App name validation in instance creation form.
+
+Make it so files created by compose based apps can be deleted by the master app.
+For image based apps, this is done by setting the container's UID to match the UID
+that runs the master app. For compose, you can't do this from the command line.

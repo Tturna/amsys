@@ -1,5 +1,5 @@
 from django.shortcuts import render, reverse, get_object_or_404
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, HttpResponseForbidden, JsonResponse
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, HttpResponseForbidden, HttpResponseBadRequest, JsonResponse
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
@@ -222,6 +222,7 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
             volumes=volumes,
             detach=True,
             network="amsys-net",
+            user="remote:sftpusers",
             name=app_name)
     except docker.errors.ImageNotFound:
         return False
@@ -774,7 +775,10 @@ def get_ssh_certificate(request, id):
     if request_instance.api_token != request_api_token:
         return HttpResponseForbidden()
 
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return HttpResponseBadRequest("Malformatted JSON data. Make sure the data is encapsulated with {} or [].")
     public_key = data.get("public_key")
 
     if not public_key or len(public_key) == 0:

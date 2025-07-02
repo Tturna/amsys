@@ -1,10 +1,30 @@
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import json
 
 load_dotenv()
 
+DEFAULT_FILE_TRANSFER_DESTINATIONS = {
+    9000 : "Download as Files",
+    9001 : "Download as JSON",
+    9002 : "Share Folder",
+    9003 : "RAPiD-e"
+}
+
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
+
+default_config_file_path = BASE_DIR / 'site-config.json'
+config_path = os.getenv("ADDMAN_SITE_CONFIG_PATH", default_config_file_path)
+
+with open(config_path, "r") as file:
+    data = json.load(file)
+
+    if ("sftp_destinations" in data):
+        for dest in data["sftp_destinations"]:
+            index = len(DEFAULT_FILE_TRANSFER_DESTINATIONS)
+            DEFAULT_FILE_TRANSFER_DESTINATIONS.update({ index: dest["name"] })
+
 app_name = os.getenv('AMSYS_APP_NAME', '')
 app_name = app_name.replace('/', '')
 
@@ -15,6 +35,11 @@ app_url_prefix = f"{app_name}/"
 STATIC_URL = app_url_prefix + 'static/'
 STATIC_ROOT = BASE_DIR / "static_production"
 STATICFILES_DIRS = (os.path.join(BASE_DIR, "static"),)
+
+LOGIN_URL = "/login"
+
+if (app_name != ''):
+    LOGIN_URL = f"/{app_name}/login"
 
 LOGGING = {
     "version": 1,

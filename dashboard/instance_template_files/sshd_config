@@ -12,11 +12,16 @@
 
 Include /etc/ssh/sshd_config.d/*.conf
 
+#UsePrivilegeSeparation no
+PidFile /tmp/sshd.pid
+
+Port 2222
 #Port 22
 #AddressFamily any
 #ListenAddress 0.0.0.0
 #ListenAddress ::
 
+HostKey /home/remote/.ssh/ssh_host_rsa_key
 #HostKey /etc/ssh/ssh_host_rsa_key
 #HostKey /etc/ssh/ssh_host_ecdsa_key
 #HostKey /etc/ssh/ssh_host_ed25519_key
