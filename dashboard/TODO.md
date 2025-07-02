@@ -16,6 +16,8 @@ presets in the future.
 
 Application creation presets (ADDMAN, RAPiD-e, option to add custom)
 
+Fix bug where an app named "test" will match with existing containers named like "addman-test".
+
 Lines between orgs in the map depending on connected instances.
 - Lines should be different if the orgs have a lot of connected app instances
 
