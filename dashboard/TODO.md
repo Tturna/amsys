@@ -27,3 +27,8 @@ App name validation in instance creation form.
 Make it so files created by compose based apps can be deleted by the master app.
 For image based apps, this is done by setting the container's UID to match the UID
 that runs the master app. For compose, you can't do this from the command line.
+
+When an instance asks for an SSH certificate (e.g. for SFTP file transfer),
+sign the cert so it can only be used to access the requested target, if allowed.
+Currently the certificate can be used to access any instance. This is only really
+an issue if someone creates a malicious app that is then executed by AMSYS.
