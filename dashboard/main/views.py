@@ -29,12 +29,22 @@ def get_instance_path(app_name):
 
     return instance_path
 
-def index(request):
-    all_instances = AppInstanceModel.objects.all()
+def is_proxy_running():
+    docker_client = docker.from_env()
+    proxy_containers = docker_client.containers.list(filters={
+        "name": "amsys-traefik"
+    })
+
+    return len(proxy_containers) == 1
+
+def get_instance_statuses(instances=None):
     docker_client = docker.from_env()
     instance_statuses = []
 
-    for inst in all_instances:
+    if instances is None:
+        instances = AppInstanceModel.objects.all()
+
+    for inst in instances:
         containers = []
 
         if inst.using_compose:
@@ -118,18 +128,17 @@ def index(request):
                 "is_error": True
             })
 
+    return instance_statuses
+
+def index(request):
+    docker_client = docker.from_env()
+    instance_statuses = get_instance_statuses()
     organizations = OrganizationEntity.objects.all()
-
-    proxy_containers = docker_client.containers.list(filters={
-        "name": "amsys-traefik"
-    })
-
-    is_proxy_running = len(proxy_containers) == 1
 
     context = {
         "organizations": organizations,
         "instance_statuses": instance_statuses,
-        "is_proxy_running": is_proxy_running
+        "is_proxy_running": is_proxy_running()
     }
 
     return render(request, "index.html", context)
@@ -137,10 +146,15 @@ def index(request):
 def view_organization(request, org_name):
     organization = get_object_or_404(OrganizationEntity, org_name=org_name)
     connected_apps = AppInstanceModel.objects.filter(owner_org=organization)
+    instance_statuses = get_instance_statuses(instances=connected_apps)
+
+    print(instance_statuses)
 
     context = {
         "org": organization,
-        "connected_apps": connected_apps
+        "connected_apps": connected_apps,
+        "instance_statuses": instance_statuses,
+        "is_proxy_running": is_proxy_running()
     }
 
     return render(request, "view_organization.html", context)

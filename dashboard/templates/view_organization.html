@@ -9,28 +9,82 @@
 
         <strong>Location</strong>
         <p>{{ org.latitude }}, {{ org.longitude }}</p>
+    </div>
+    <div class="col">
+        <h2>Apps in {{ org.org_name }}</h2>
 
-        {% if connected_apps %}
-        <h3>Connected app instances</h3>
-        {% else %}
-        <h3>No connected app instances</h3>
+        {% if not is_proxy_running %}
+        <div class="alert alert-danger" role="alert">
+            the traefik proxy is not running! access to app instances is limited.
+            <a class="btn btn-sm btn-secondary" href="{% url 'proxy' %}">manage proxy</a>
+        </div>
         {% endif %}
-        {% for instance in connected_apps %}
-            <p>
-            {{ instance.app_name }}
-            @<a href="/{{ instance.url_path }}">/{{ instance.url_path }}</a>
-            - <span id="{{ instance.app_name }}_status">Running</span>
-            - {{ instance.created_at }}
-            <a class="btn btn-secondary" href="/view_instance/{{ instance.app_name }}">View</a>
 
-            {% comment %}
-            {% if perms.main.change_appinstancemodel %}
-            <button id="{{ instance.app_name }}_stop_button" onclick="call_stop_instance('{{ instance.app_name }}')">Stop</button>
-            {% else %}
-            <button disabled="disabled">Stop</button>
-            {% endif %}
-            {% endcomment %}
-            </p>
+        {% for status_entry in instance_statuses %}
+        <div class="card my-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-8">
+                        <h4 class="card-title">{{ status_entry.instance.app_name }}
+                            {% if status_entry.status == "RUNNING" %}
+                            <span class="badge bg-success mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
+                            {% elif status_entry.status == "STOPPED" %}
+                            <span class="badge bg-secondary mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
+                            {% elif status_entry.status == "MISSING" %}
+                            <span class="badge bg-warning mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
+                            {% elif status_entry.status == "ERROR" or status_entry.status == "removed" %}
+                            <span class="badge bg-danger mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
+                            {% endif %}
+                        </h4>
+                        <p class="card-text text-body-secondary">{{ status_entry.instance.owner_org.org_name }} 
+                        - <a class="card-link" href="http://localhost/{{ status_entry.instance.url_path }}">/{{ status_entry.instance.url_path }}</a>
+                        {% if not is_proxy_running %}
+                        <em class="text-danger"> proxy inactive</em>
+                        {% endif %}
+                        </p>
+
+                        <div class="mb-3">
+                            <a href="/view_instance/{{ status_entry.instance.app_name }}"><button class="btn btn-sm btn-success">view</button></a>
+
+                            {% if perms.main.change_appinstancemodel %}
+                                {% if status_entry.status == "RUNNING" %}
+                                <button class="btn btn-sm btn-outline-warning" id="{{ status_entry.instance.app_name }}_stop_button" onclick="call_stop_instance('{{ status_entry.instance.app_name }}')">stop</button>
+                                {% elif status_entry.status == "STOPPED" %}
+                                <button class="btn btn-sm btn-outline-success" id="{{ status_entry.instance.app_name }}_start_button" onclick="call_start_instance('{{ status_entry.instance.app_name }}')">start</button>
+                                <button class="btn btn-sm btn-outline-danger" id="{{ status_entry.instance.app_name }}_remove_button" onclick="call_remove_instance('{{ status_entry.instance.app_name }}')">remove</button>
+                                {% elif status_entry.status == "REMOVED" %}
+                                <button class="btn btn-sm btn-outline-success" id="{{ status_entry.instance.app_name }}_restart_button" onclick="call_restart_instance('{{ status_entry.instance.app_name }}')">restart</button>
+                                <button class="btn btn-sm btn-outline-secondary" id="{{ status_entry.instance.app_name }}_forget_button" onclick="call_forget_instance('{{ status_entry.instance.app_name }}')">forget</button>
+                                {% else %}
+                                <button class="btn btn-sm btn-outline-danger" id="{{ status_entry.instance.app_name }}_remove_button" onclick="call_remove_instance('{{ status_entry.instance.app_name }}')">remove</button>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+
+                        {% if status_entry.instance.using_compose %}
+                        <p class="card-subtitle text-body-secondary"><strong>containers</strong><span class="badge bg-secondary mx-5">compose</span></p>
+                        {% else %}
+                        <p class="card-subtitle text-body-secondary"><strong>containers</strong></p>
+                        {% endif %}
+
+                        <ul>
+                        {% for container in status_entry.target_containers %}
+                        <li class="card-text text-body-secondary">{{ container }}</li>
+                        {% endfor %}
+                        </ul>
+
+                        {% if status_entry.is_error %}
+                        <div class="alert alert-danger p-2">{{ status_entry.status_message }}</div>
+                        {% else %}
+                        <div class="alert alert-success p-2">{{ status_entry.status_message }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-4">
+                        <p class="card-text text-end">Created: {{ status_entry.instance.created_at }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
         {% endfor %}
     </div>
 </div>

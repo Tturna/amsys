@@ -14,10 +14,13 @@ Make the dynamic form inputs of app creation (like labels, env, volumes...) part
 the form model so the changes persist across a page reload and can be used for
 presets in the future.
 
+Application creation presets (ADDMAN, RAPiD-e, option to add custom)
+
+Lines between orgs in the map depending on connected instances.
+- Lines should be different if the orgs have a lot of connected app instances
+
 Go through all used env vars and document them. Make it so no AMSYS vars include
 the ADDMAN name.
-
-Application creation presets (ADDMAN, RAPiD-e, option to add custom)
 
 Make it so the index page, view instance page etc. don't hard code the instance domain
 to localhost.
