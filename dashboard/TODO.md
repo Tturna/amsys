@@ -10,11 +10,7 @@ Generalize app instance creation to support other kinds of apps.
 
 Add instructions and validation for compose files.
 
-Make the dynamic form inputs of app creation (like labels, env, volumes...) part of
-the form model so the changes persist across a page reload and can be used for
-presets in the future.
-
-Application creation presets (ADDMAN, RAPiD-e, option to add custom)
+Let the user set the user with which to run containers.
 
 Fix bug where an app named "test" will match with existing containers named like "addman-test".
 
