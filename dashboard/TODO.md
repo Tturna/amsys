@@ -8,6 +8,10 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
+Fix bug where when app url path is not equal to app name, addman static files are not found properly.
+
+Fix bug where addman preset doesn't work.
+
 Add instructions and validation for compose files.
 
 Fix bug where an app named "test" will match with existing containers named like "addman-test".
