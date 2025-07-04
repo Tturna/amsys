@@ -20,7 +20,15 @@
                 {% csrf_token %}
                 {{ form|crispy }}
 
-                <button id="toggle_advanced" class="btn btn-sm btn-secondary">Advanced settings</button>
+                {% comment %}
+                TODO: Figure out how to put the more advanced static form fields into the
+                advanced settings section as well. Maybe you need to render the form fields
+                separately or use something like crispy forms layouts. This project uses
+                crispy forms anyway.
+                https://django-crispy-forms.readthedocs.io/en/latest/layouts.html
+                {% endcomment %}
+
+                <button id="toggle_advanced" class="btn btn-sm btn-secondary mb-5 d-block">Advanced settings</button>
                 <div id="advanced" class="d-none">
                     <fieldset id="dir-entries" class="my-5">
                         <legend class="form-label">Instance directories</legend>
@@ -113,9 +121,9 @@
                             </div>
                         </div>
                     </fieldset>
-
-                    <input class="btn btn-primary" type="submit" value="Create" />
                 </div>
+
+                <input class="btn btn-primary" type="submit" value="Create" />
             </form>
         </div>
     </div>

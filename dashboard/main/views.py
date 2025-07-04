@@ -180,6 +180,10 @@ def create_organization(request):
 
 def create_app_from_image(request, form, app_name, url_path, api_token, app_instance, instance_path, template_files):
     container_image = form.cleaned_data["container_image"]
+    container_user = form.cleaned_data["container_user"]
+
+    if container_user == "root" or container_user == "root:root":
+        container_user = ""
 
     env_keys = request.POST.getlist("env_entry_key[]")
     env_vals = request.POST.getlist("env_entry_val[]")
@@ -266,7 +270,7 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
             volumes=volumes,
             detach=True,
             network="amsys-net",
-            user="remote:sftpusers",
+            user=container_user,
             name=app_name)
     except docker.errors.ImageNotFound:
         print(f"Container image '{container_image}' not found.")

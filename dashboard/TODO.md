@@ -10,8 +10,6 @@ Generalize app instance creation to support other kinds of apps.
 
 Add instructions and validation for compose files.
 
-Let the user set the user with which to run containers.
-
 Fix bug where an app named "test" will match with existing containers named like "addman-test".
 
 Lines between orgs in the map depending on connected instances.
@@ -24,6 +22,10 @@ Make it so the index page, view instance page etc. don't hard code the instance 
 to localhost.
 
 App name validation in instance creation form.
+
+Make it so any instance creation form fields can be placed in the advanced settings section
+so the user doesn't need to see stuff like the "container user" field if they don't care
+about it.
 
 Make it so files created by compose based apps can be deleted by the master app.
 For image based apps, this is done by setting the container's UID to match the UID

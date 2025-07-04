@@ -79,8 +79,14 @@ class AppInstanceForm(forms.ModelForm):
                 self.fields["compose_file"] = forms.FileField(label="Docker compose YAML file", widget=forms.FileInput(attrs={"accept": ".yaml, .yml"}))
                 self.order_fields(["app_name", "url_path", "owner_org", "compose_file", "template_files"])
             else:
-                self.fields["container_image"] = forms.CharField(label="Docker container image name", max_length=50, strip=True, help_text="e.g. addman, nginx:1.27, debian:bookworm")
-
+                self.fields["container_image"] = \
+                        forms.CharField(label="Docker container image name", max_length=50,
+                                        strip=True, help_text="e.g. addman, nginx:1.27, debian:bookworm")
+                self.fields["container_user"] = \
+                        forms.CharField(label="Container user", max_length=20, strip=True,
+                                        required=False,
+                                        help_text="The user must exist in the container. \"root\" or an empty user will run the container as the root user.",
+                                        widget=forms.TextInput(attrs={"placeholder": "username"}))
                 self.order_fields(["app_name", "url_path", "owner_org", "container_image", "template_files"])
 
     def clean(self):
