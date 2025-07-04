@@ -141,6 +141,9 @@ def index(request):
         "is_proxy_running": is_proxy_running()
     }
 
+    if "preset" in request.session:
+        del request.session["preset"]
+
     return render(request, "index.html", context)
 
 def view_organization(request, org_name):
@@ -154,6 +157,9 @@ def view_organization(request, org_name):
         "instance_statuses": instance_statuses,
         "is_proxy_running": is_proxy_running()
     }
+
+    if "preset" in request.session:
+        del request.session["preset"]
 
     return render(request, "view_organization.html", context)
 
@@ -299,6 +305,7 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
         preset.save()
         preset.template_files.set(template_files)
 
+    del request.session["preset"]
     return True
 
 def create_app_from_compose(request, instance_path, app_name):
@@ -346,7 +353,6 @@ def create_app_instance(request, using_compose=False):
                 form.order_fields(["preset_name"])
 
             preset_form = forms.AppPresetForm({"preset": init_preset})
-            del request.session["preset"]
         elif not using_compose:
             preset_form = forms.AppPresetForm()
 
@@ -627,6 +633,9 @@ def view_instance(request, app_name):
         "destinations": available_transmit_destinations
     }
 
+    if "preset" in request.session:
+        del request.session["preset"]
+
     return render(request, "view_instance.html", context)
 
 @login_required
@@ -698,6 +707,9 @@ def map(request):
         "orgs": orgs_data
     }
 
+    if "preset" in request.session:
+        del request.session["preset"]
+
     return render(request, "map.html", context)
 
 @login_required
@@ -723,6 +735,9 @@ def proxy(request):
     context = {
         "is_proxy_running": is_proxy_running
     }
+
+    if "preset" in request.session:
+        del request.session["preset"]
 
     return render(request, "proxy.html", context)
 
