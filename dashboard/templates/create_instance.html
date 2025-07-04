@@ -230,14 +230,14 @@
         let init_env;
 
         if (init_dirs_string) {
-            init_dirs = JSON.parse(init_dirs_string);
+            init_dirs = JSON.parse(init_dirs_string.replaceAll("'", "\""));
             init_dirs.forEach(dir => {
                 add_entry(hidden_dir_entry, dir);
             });
         }
 
         if (init_labels_string) {
-            init_labels = JSON.parse(init_labels_string);
+            init_labels = JSON.parse(init_labels_string.replaceAll("'", "\""));
 
             for (const [key, value] of Object.entries(init_labels)) {
                 add_entry(hidden_label_entry, value, key);
@@ -245,7 +245,7 @@
         }
 
         if (init_volumes_string) {
-            init_volumes = JSON.parse(init_volumes_string);
+            init_volumes = JSON.parse(init_volumes_string.replaceAll("'", "\""));
 
             for (const [key, value] of Object.entries(init_volumes)) {
                 add_entry(hidden_volume_entry, value, key);
@@ -253,7 +253,7 @@
         }
 
         if (init_env_string) {
-            init_env = JSON.parse(init_env_string);
+            init_env = JSON.parse(init_env_string.replaceAll("'", "\""));
 
             for (const [key, value] of Object.entries(init_env)) {
                 add_entry(hidden_env_entry, value, key);
