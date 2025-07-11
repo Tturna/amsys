@@ -12,8 +12,6 @@ Make it so presets and organizations can be removed.
 
 Add instructions and validation for compose files.
 
-Fix bug where an app named "test" will match with existing containers named like "addman-test".
-
 Lines between orgs in the map depending on connected instances.
 - Lines should be different if the orgs have a lot of connected app instances
 

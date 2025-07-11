@@ -46,16 +46,27 @@ def get_instance_statuses(instances=None):
         instances = AppInstanceModel.objects.all()
 
     for inst in instances:
-        containers = []
+        containers_raw = []
 
         if inst.using_compose:
-            containers = docker_client.containers.list(all=True, filters={
+            containers_raw = docker_client.containers.list(all=True, filters={
                 "label": f"com.docker.compose.project={inst.app_name}"
             })
         else:
-            containers = docker_client.containers.list(all=True, filters={
+            # This will match all containers where their name includes the given string.
+            # For example, if app name is "test", this will return "app_test",
+            # "test_db", and "testing_container" if they exist.
+            containers_raw = docker_client.containers.list(all=True, filters={
                 "name": inst.app_name
             })
+
+        containers = []
+
+        for c in containers_raw:
+            if c.name != inst.app_name:
+                # Skip containers that don't exactly match the app name
+                continue
+            containers.append(c)
 
         if len(containers) == 0:
             if inst.status != AppStatusEnum.REMOVED.value:
@@ -610,10 +621,7 @@ def remove_instance(request, app_name):
             app_container = docker_client.containers.get(app_name)
             app_container.remove(v=True, force=True)
         except docker.errors.NotFound:
-            messages.error(request, "App container not found! Some data may be lost.")
-            instance.status = AppStatusEnum.MISSING.value
-            instance.save()
-
+            messages.error(request, "App container not found! Removing data.")
             return HttpResponse(status=204)
         except docker.errors.APIError:
             messages.error(request, "Container API error. Try again later.")
