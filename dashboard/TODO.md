@@ -8,32 +8,26 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
-Fix bug where when app url path is not equal to app name, addman static files are not found properly.
-
-Fix bug where addman preset doesn't work.
-
-Make it so presets and organizations can be removed.
-
-Add instructions and validation for compose files.
-
-Fix bug where an app named "test" will match with existing containers named like "addman-test".
-
 Lines between orgs in the map depending on connected instances.
 - Lines should be different if the orgs have a lot of connected app instances
-
-Go through all used env vars and document them. Make it so no AMSYS vars include
-the ADDMAN name.
-
-Consider refactoring views.py and splitting it into multiple files.
-
-Make it so the index page, view instance page etc. don't hard code the instance domain
-to localhost.
 
 App name validation in instance creation form.
 
 Make it so any instance creation form fields can be placed in the advanced settings section
 so the user doesn't need to see stuff like the "container user" field if they don't care
 about it.
+
+Make it so presets and organizations can be removed.
+
+Go through all used env vars and document them. Make it so no AMSYS vars include
+the ADDMAN name.
+
+Add instructions and validation for compose files.
+
+Consider refactoring views.py and splitting it into multiple files.
+
+Make it so the index page, view instance page etc. don't hard code the instance domain
+to localhost.
 
 Make it so files created by compose based apps can be deleted by the master app.
 For image based apps, this is done by setting the container's UID to match the UID
