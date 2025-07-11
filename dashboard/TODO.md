@@ -8,6 +8,10 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
+Add models to admin so things can actually be managed.
+
+Make it so presets and organizations can be removed.
+
 Add instructions and validation for compose files.
 
 Fix bug where an app named "test" will match with existing containers named like "addman-test".
