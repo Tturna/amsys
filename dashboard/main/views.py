@@ -131,6 +131,7 @@ def get_instance_statuses(instances=None):
 
     return instance_statuses
 
+@login_required
 def index(request):
     instance_statuses = get_instance_statuses()
     organizations = OrganizationEntity.objects.all()
@@ -146,6 +147,7 @@ def index(request):
 
     return render(request, "index.html", context)
 
+@login_required
 def view_organization(request, org_name):
     organization = get_object_or_404(OrganizationEntity, org_name=org_name)
     connected_apps = AppInstanceModel.objects.filter(owner_org=organization)
@@ -463,6 +465,7 @@ def create_app_instance(request, using_compose=False):
     messages.success(request, "App started successfully")
     return HttpResponseRedirect(reverse("index"))
 
+@login_required
 def apply_preset(request):
     preset_form = forms.AppPresetForm(request.POST)
 
@@ -624,6 +627,7 @@ def remove_instance(request, app_name):
 
     return HttpResponse(status=204)
 
+@login_required
 def view_instance(request, app_name):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
     available_transmit_destinations = AppConnectionModel.objects.filter(instance_from=instance)
@@ -699,6 +703,7 @@ def forget_instance(request, app_name):
 
     return HttpResponse(status=204)
 
+@login_required
 def map(request):
     orgs = OrganizationEntity.objects.all().values("org_name", "latitude", "longitude")
     orgs_data = json.dumps(list(orgs), default=str)
