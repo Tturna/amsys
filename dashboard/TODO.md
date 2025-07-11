@@ -8,9 +8,6 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
-Ensure there's no bug when the url path is different from the app name. There could be some
-static file issues.
-
 Lines between orgs in the map depending on connected instances.
 - Lines should be different if the orgs have a lot of connected app instances
 

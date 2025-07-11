@@ -218,7 +218,9 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
     volume_entries = list(zip(volume_keys, volume_vals))
 
     env = {
-        "AMSYS_APP_NAME": app_name,
+        # TODO: Rename this env var to AMSYS_URL_PATH.
+        # This is what apps use to determine the path where they are hosted.
+        "AMSYS_APP_NAME": url_path,
         "AMSYS_API_TOKEN": api_token,
         "AMSYS_APP_ID": str(app_instance.pk)
     }
