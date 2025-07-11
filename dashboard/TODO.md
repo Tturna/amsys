@@ -12,6 +12,8 @@ Fix bug where when app url path is not equal to app name, addman static files ar
 
 Fix bug where addman preset doesn't work.
 
+Make it so presets and organizations can be removed.
+
 Add instructions and validation for compose files.
 
 Fix bug where an app named "test" will match with existing containers named like "addman-test".
