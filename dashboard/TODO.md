@@ -24,6 +24,8 @@ Lines between orgs in the map depending on connected instances.
 Go through all used env vars and document them. Make it so no AMSYS vars include
 the ADDMAN name.
 
+Consider refactoring views.py and splitting it into multiple files.
+
 Make it so the index page, view instance page etc. don't hard code the instance domain
 to localhost.
 
