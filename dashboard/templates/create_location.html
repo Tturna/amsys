@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+{% endblock %}
+
+{% block content %}
+    <h1>Provisioner Dashboard</h1>
+    <hr>
+    <div class="row">
+        <div class="col-12 d-flex flex-wrap justify-content-between">
+            <div class="mx-3">
+                <h3>Create new location</h2>
+                <form style="flex-grow: 2" action="{% url 'create_location' %}" method="POST">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <input class="btn btn-primary" type="submit" value="Create" />
+                </form>
+            </div>
+            <div class="mx-3">
+                <h3>Choose location</h3>
+                <div id="map" class="p-2" style="width: 800px; height: 500px;"></div>
+            </div
+        </div>
+    </div>
+
+    <script src="{% static 'form_map.js' %}"></script>
+{% endblock %}

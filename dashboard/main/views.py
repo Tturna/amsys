@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django import forms as django_forms
-from .models import AppInstanceModel, AppConnectionModel, AppPresetModel, OrganizationEntity, AppStatusEnum
+from .models import AppInstanceModel, AppConnectionModel, AppPresetModel, LocationModel, OrganizationEntity, AppStatusEnum
 from . import forms
 
 from subprocess import run
@@ -159,15 +159,25 @@ def index(request):
     return render(request, "index.html", context)
 
 @login_required
+def organizations(request):
+    orgs = OrganizationEntity.objects.all()
+
+    return render(request, "organizations.html", { "organizations": orgs })
+
+@login_required
+def locations(request):
+    locations = LocationModel.objects.all()
+
+    return render(request, "locations.html", { "locations": locations })
+
+@login_required
 def view_organization(request, org_name):
     organization = get_object_or_404(OrganizationEntity, org_name=org_name)
-    connected_apps = AppInstanceModel.objects.filter(owner_org=organization)
-    instance_statuses = get_instance_statuses(instances=connected_apps)
+    locations = LocationModel.objects.filter(owner_org=organization)
 
     context = {
         "org": organization,
-        "connected_apps": connected_apps,
-        "instance_statuses": instance_statuses,
+        "locations": locations,
         "is_proxy_running": is_proxy_running()
     }
 
@@ -175,6 +185,23 @@ def view_organization(request, org_name):
         del request.session["preset"]
 
     return render(request, "view_organization.html", context)
+
+@login_required
+def view_location(request, location_name):
+    location = get_object_or_404(LocationModel, location_name=location_name)
+    connected_apps = AppInstanceModel.objects.filter(location=location)
+    instance_statuses = get_instance_statuses(connected_apps)
+
+    context = {
+        "location": location,
+        "instance_statuses": instance_statuses,
+        "is_proxy_running": is_proxy_running()
+    }
+
+    if "preset" in request.session:
+        del request.session["preset"]
+
+    return render(request, "view_location.html", context)
 
 @login_required
 @permission_required("main.add_organizationentitymodel")
@@ -194,6 +221,27 @@ def create_organization(request):
         else:
             messages.error(request, "Invalid form")
             return render(request, "create_organization.html", { "form": form })
+
+    return HttpResponseRedirect(reverse("index"))
+
+@login_required
+@permission_required("main.add_organizationentitymodel")
+def create_location(request):
+    if request.method == "GET":
+        form = forms.LocationForm()
+
+        return render(request, "create_location.html", { "form": form })
+
+    if request.method == "POST":
+        form = forms.LocationForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+
+            return HttpResponseRedirect(reverse("index"))
+        else:
+            messages.error(request, "Invalid form")
+            return render(request, "create_location.html", { "form": form })
 
     return HttpResponseRedirect(reverse("index"))
 

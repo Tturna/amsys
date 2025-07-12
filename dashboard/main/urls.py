@@ -6,8 +6,12 @@ from . import views
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("organizations/", views.organizations, name="organizations"),
+    path("locations/", views.locations, name="locations"),
     path("view_organization/<org_name>/", views.view_organization, name="view_organization"),
+    path("view_location/<location_name>/", views.view_location, name="view_location"),
     path("create_organization/", views.create_organization, name="create_organization"),
+    path("create_location/", views.create_location, name="create_location"),
     path("create_app_instance/", views.create_app_instance, name="create_app_instance"),
     path("create_app_instance/<using_compose>", views.create_app_instance, name="create_app_instance"),
     path("apply_preset/", views.apply_preset, name="apply_preset"),
