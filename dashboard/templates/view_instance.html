@@ -9,8 +9,12 @@
     <div class="col">
         <h2>{{ instance.app_name }}</h2>
         <p>
+            Location:
+            <a href="{% url 'view_location' instance.location.location_name %}">{{ instance.location.location_name }}</a>
+        </p>
+        <p>
             Connected organization:
-            <a href="{% url 'view_organization' instance.owner_org.org_name %}">{{ instance.owner_org.org_name }}</a>
+            <a href="{% url 'view_organization' instance.location.owner_org.org_name %}">{{ instance.location.owner_org.org_name }}</a>
         </p>
         <p>Hosted at <a href="http://localhost/{{ instance.url_path }}">http://localhost/{{ instance.url_path }}</a></p>
 

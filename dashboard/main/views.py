@@ -3,6 +3,7 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllow
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
+from django.forms.models import model_to_dict
 from django import forms as django_forms
 from .models import AppInstanceModel, AppConnectionModel, AppPresetModel, LocationModel, OrganizationEntity, AppStatusEnum
 from . import forms
@@ -456,7 +457,7 @@ def create_app_instance(request, using_compose=False):
             return render(request, "create_compose_instance.html", { "form": form })
 
     url_path = form.cleaned_data["url_path"]
-    owner_org = form.cleaned_data["owner_org"]
+    location = form.cleaned_data["location"]
     transmit_destinations = form.cleaned_data["transmit_destinations"]
     template_files = form.cleaned_data["template_files"]
 
@@ -477,7 +478,7 @@ def create_app_instance(request, using_compose=False):
     api_token = secrets.token_urlsafe(16)
 
     app_instance = AppInstanceModel(app_name=app_name, url_path=url_path,
-                                    owner_org=owner_org, status=AppStatusEnum.RUNNING.value,
+                                    location=location, status=AppStatusEnum.RUNNING.value,
                                     created_at=datetime_now, api_token=api_token,
                                     using_compose=using_compose)
     app_instance.save()
@@ -763,11 +764,47 @@ def forget_instance(request, app_name):
 
 @login_required
 def map(request):
-    orgs = OrganizationEntity.objects.all().values("org_name", "latitude", "longitude")
-    orgs_data = json.dumps(list(orgs), default=str)
+    instances = AppInstanceModel.objects.all()
+    location_entries = list(LocationModel.objects.values())
+
+    for index in range(len(location_entries)):
+        location_entries[index].update({ "apps": [] })
+
+    for inst in instances:
+        location_dict = model_to_dict(inst.location)
+        inst_dict = model_to_dict(inst, fields=["app_name", "url_path"])
+
+        for entry in location_entries:
+            if location_dict["id"] == entry["id"]:
+                apps = entry["apps"]
+                apps.append(inst_dict)
+                entry["apps"] = apps
+                break
+
+    locations_data = json.dumps(location_entries, default=str)
+
+    connections = AppConnectionModel.objects.all()
+    connection_pair_coordinates = []
+
+    for connection in connections:
+        instance_from = connection.instance_from
+        instance_to = connection.instance_to
+        location_from = instance_from.location
+        location_to = instance_to.location
+
+        if location_from is location_to:
+            continue
+
+        from_coordinates = [location_from.latitude, location_from.longitude]
+        to_coordinates = [location_to.latitude, location_to.longitude]
+        pair = [from_coordinates, to_coordinates]
+        connection_pair_coordinates.append(pair)
+
+    connections_data = json.dumps(connection_pair_coordinates, default=str)
 
     context = {
-        "orgs": orgs_data
+        "locations": locations_data,
+        "connections": connections_data
     }
 
     if "preset" in request.session:

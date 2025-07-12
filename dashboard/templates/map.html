@@ -22,7 +22,8 @@ The script element below just exists so that data from the backend can
 be used in frontend JS.
 {% endcomment %} 
 <script>
-    const orgs = {{ orgs|safe }};
+    const locations = {{ locations|safe }};
+    const connections = {{ connections|safe }};
 </script>
 <script src="{% static 'map.js' %}"></script>
 {% endblock %}
