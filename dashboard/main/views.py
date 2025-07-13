@@ -252,6 +252,17 @@ def create_location(request):
 
     return HttpResponseRedirect(reverse("index"))
 
+@login_required
+@permission_required("main.delete_locationmodel")
+def remove_location(request, location_pk):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    location = get_object_or_404(LocationModel, pk=location_pk)
+    location.delete()
+
+    return HttpResponse(status=204)
+
 class ImageBasedAppAdvancedSettings:
     def __init__(self, env_vars = [], labels = [], volumes = []) -> None:
         self.env_vars: List[Tuple[str, str]] = env_vars
