@@ -170,8 +170,12 @@ def organizations(request):
 @login_required
 def locations(request):
     locations = LocationModel.objects.all()
+    context = {
+        "locations": locations,
+        "is_proxy_running": is_proxy_running()
+    }
 
-    return render(request, "locations.html", { "locations": locations })
+    return render(request, "locations.html", context)
 
 @login_required
 def view_organization(request, org_name):
