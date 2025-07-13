@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% load static %}
 
 <h1>Provisioner Dashboard</h1>
 <hr>
@@ -9,6 +10,10 @@
 
         <strong>Nationality</strong>
         <p>{{ org.nationality }}</p>
+
+        {% if perms.main.delete_organizationentity %}
+        <button class="btn btn-outline-danger" onclick="call_remove_organization({{ org.pk }})">Remove</button>
+        {% endif %}
     </div>
     <div class="col">
         <h2>Locations in {{ org.org_name }}</h2>
@@ -39,4 +44,6 @@
         {% endfor %}
     </div>
 </div>
+
+<script src="{% static 'organization_controls.js' %}"></script>
 {% endblock %}

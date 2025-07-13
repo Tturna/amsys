@@ -149,9 +149,11 @@ def get_instance_statuses(instances=None):
 def index(request):
     instance_statuses = get_instance_statuses()
     organizations = OrganizationEntity.objects.all()
+    locations = LocationModel.objects.all()
 
     context = {
         "organizations": organizations,
+        "locations": locations,
         "instance_statuses": instance_statuses,
         "is_proxy_running": is_proxy_running()
     }
@@ -170,8 +172,11 @@ def organizations(request):
 @login_required
 def locations(request):
     locations = LocationModel.objects.all()
+    organizations = OrganizationEntity.objects.all()
+
     context = {
         "locations": locations,
+        "organizations": organizations,
         "is_proxy_running": is_proxy_running()
     }
 
@@ -230,6 +235,17 @@ def create_organization(request):
             return render(request, "create_organization.html", { "form": form })
 
     return HttpResponseRedirect(reverse("index"))
+
+@login_required
+@permission_required("main.delete_organizationentity")
+def remove_organization(request, organization_pk):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    org = get_object_or_404(OrganizationEntity, pk=organization_pk)
+    org.delete()
+
+    return HttpResponse(status=204)
 
 @login_required
 @permission_required("main.add_organizationentitymodel")

@@ -37,14 +37,14 @@
         </div>
         {% endif %}
 
-        {% if organizations %}
+        {% if locations %}
             {% if perms.main.add_appinstancemodel %}
             <a href="{% url 'create_app_instance' %}"><button class="btn btn-primary">Create new instance</button></a>
             {% else %}
             <button class="btn btn-primary disabled" disabled="disabled">Create new instance</button>
             {% endif %}
         {% else %}
-            <button class="btn btn-primary disabled" disabled="disabled">Create new instance</button><span style="color: red"> No organizations defined</span>
+            <button class="btn btn-primary disabled" disabled="disabled">Create new instance</button><span style="color: red"> No locations defined</span>
         {% endif %}
 
         {% for status_entry in instance_statuses %}

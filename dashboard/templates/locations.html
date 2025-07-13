@@ -15,10 +15,14 @@
 <div class="row">
     <div class="col">
         <h2>Locations</h2>
-        {% if perms.main.add_locationmodel %}
-        <a href="{% url 'create_location' %}"><button class="btn btn-primary">Add location</button></a>
+        {% if organizations %}
+            {% if perms.main.add_locationmodel %}
+            <a href="{% url 'create_location' %}"><button class="btn btn-primary">Add location</button></a>
+            {% else %}
+            <button class="btn btn-primary disabled" disabled="disabled">Add location</button>
+            {% endif %}
         {% else %}
-        <button class="btn btn-primary disabled" disabled="disabled">Add location</button>
+            <button class="btn btn-primary disabled" disabled="disabled">Add location</button><span style="color: red"> No organizations defined</span>
         {% endif %}
 
         <h3 class="mt-5">All Locations</h3>

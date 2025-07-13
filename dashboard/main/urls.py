@@ -21,6 +21,7 @@ urlpatterns = [
     path("restart_instance/<app_name>/", views.restart_instance, name="restart_instance"),
     path("remove_instance/<app_name>/", views.remove_instance, name="remove_instance"),
     path("remove_location/<location_pk>/", views.remove_location, name="remove_location"),
+    path("remove_organization/<organization_pk>/", views.remove_organization, name="remove_organization"),
     path("forget_instance/<app_name>/", views.forget_instance, name="forget_instance"),
     path("view_instance/<app_name>/", views.view_instance, name="view_instance"),
     path("edit_instance/<app_name>/", views.edit_instance, name="edit_instance"),
