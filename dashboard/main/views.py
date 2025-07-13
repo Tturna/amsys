@@ -183,6 +183,19 @@ def locations(request):
     return render(request, "locations.html", context)
 
 @login_required
+def presets(request):
+    presets = AppPresetModel.objects.all()
+    locations = LocationModel.objects.all()
+    print(presets)
+
+    context = {
+        "presets": presets,
+        "locations": locations
+    }
+
+    return render(request, "presets.html", context)
+
+@login_required
 def view_organization(request, org_name):
     organization = get_object_or_404(OrganizationEntity, org_name=org_name)
     locations = LocationModel.objects.filter(owner_org=organization)
@@ -417,6 +430,7 @@ def create_app_from_image(advanced_settings: ImageBasedAppAdvancedSettings, cont
 
         preset.save()
         preset.template_files.set(template_files)
+        preset.save()
 
     return True
 
@@ -578,7 +592,9 @@ def create_app_instance(request, using_compose=False):
         advanced_settings.set_labels(label_keys, label_vals)
         advanced_settings.set_volumes(volume_keys, volume_vals)
 
-        started_successfully = create_app_from_image(advanced_settings, container_image, container_user, app_name, url_path, api_token, app_instance, instance_path, template_files)
+        preset_name = request.POST.get("preset_name", None)
+
+        started_successfully = create_app_from_image(advanced_settings, container_image, container_user, app_name, url_path, api_token, app_instance, instance_path, template_files, preset_name)
 
     if not started_successfully:
         messages.error(request, "App didn't start succesfully")
@@ -616,6 +632,17 @@ def apply_preset(request):
         messages.error(request, "Invalid preset")
 
     return HttpResponseRedirect(reverse("create_app_instance"))
+
+@login_required
+@permission_required("main.delete_apppresetmodel")
+def remove_preset(request, preset_pk):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    preset = get_object_or_404(AppPresetModel, pk=preset_pk)
+    preset.delete()
+
+    return HttpResponse(status=204)
 
 @login_required
 @permission_required("main.change_appinstancemodel")

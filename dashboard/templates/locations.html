@@ -25,10 +25,11 @@
             <button class="btn btn-primary disabled" disabled="disabled">Add location</button><span style="color: red"> No organizations defined</span>
         {% endif %}
 
-        <h3 class="mt-5">All Locations</h3>
-        {% for location in locations %}
-        <p><a class="btn btn-sm btn-success" href="{% url 'view_location' location.location_name %}">{{ location.location_name }}</a></p>
-        {% endfor %}
+        <div class="mt-3">
+            {% for location in locations %}
+            <p><a class="btn btn-sm btn-success" href="{% url 'view_location' location.location_name %}">{{ location.location_name }}</a></p>
+            {% endfor %}
+        </div>
     </div>
     <div class="col">
     </div>
