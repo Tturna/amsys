@@ -50,6 +50,8 @@ class AppInstanceModel(models.Model):
     created_at = models.DateTimeField()
     api_token = models.CharField(max_length=20)
     using_compose = models.BooleanField()
+    container_image = models.CharField(max_length=50, blank=True)
+    container_user = models.CharField(max_length=50, blank=True)
     # These should contain JSON formatted data:
     instance_directories = models.CharField(max_length=1024, blank=True)
     instance_labels = models.CharField(max_length=1024, blank=True)

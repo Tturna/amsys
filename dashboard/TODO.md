@@ -8,8 +8,6 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
-Restart-feature
-
 Make it so presets, locations, and organizations can be removed.
 
 App name validation in instance creation form.
