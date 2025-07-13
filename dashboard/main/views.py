@@ -588,14 +588,21 @@ def apply_preset(request):
 
 @login_required
 @permission_required("main.change_appinstancemodel")
-def stop_instance(request, app_name):
+def stop_instance(request, app_name, should_kill=False):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
     docker_client = docker.from_env()
 
     instance_path = get_instance_path(app_name)
 
     if (instance.using_compose):
-        stop_compose_result = run(["docker", "compose", "-p", app_name, "stop"], cwd=instance_path, capture_output=True, text=True)
+        command = None
+
+        if should_kill:
+            command = ["docker", "compose", "-p", app_name, "kill"]
+        else:
+            command = ["docker", "compose", "-p", app_name, "stop"]
+
+        stop_compose_result = run(command, cwd=instance_path, capture_output=True, text=True)
 
         if stop_compose_result.returncode != 0:
             messages.error(request, f"App failed to stop. Error code {stop_compose_result.returncode}")
@@ -605,7 +612,11 @@ def stop_instance(request, app_name):
     else:
         try:
             app_container = docker_client.containers.get(app_name)
-            app_container.stop()
+
+            if should_kill:
+                app_container.kill()
+            else:
+                app_container.stop()
         except docker.errors.NotFound:
             messages.error(request, "App container not found! Some data may be lost.")
             instance.status = AppStatusEnum.MISSING.value

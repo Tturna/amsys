@@ -16,6 +16,7 @@ urlpatterns = [
     path("create_app_instance/<using_compose>", views.create_app_instance, name="create_app_instance"),
     path("apply_preset/", views.apply_preset, name="apply_preset"),
     path("stop_instance/<app_name>/", views.stop_instance, name="stop_instance"),
+    path("stop_instance/<app_name>/<should_kill>", views.stop_instance, name="stop_instance"),
     path("start_instance/<app_name>/", views.start_instance, name="start_instance"),
     path("restart_instance/<app_name>/", views.restart_instance, name="restart_instance"),
     path("remove_instance/<app_name>/", views.remove_instance, name="remove_instance"),
