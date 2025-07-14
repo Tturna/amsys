@@ -8,8 +8,6 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
-Make it so presets  and organizations can be removed.
-
 App name validation in instance creation form.
 
 Make it so any instance creation form fields can be placed in the advanced settings section
