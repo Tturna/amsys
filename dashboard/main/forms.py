@@ -1,6 +1,6 @@
 from django import forms
 from django.conf import settings
-from .models import OrganizationEntity, AppInstanceModel, TemplateFileModel, AppPresetModel
+from .models import OrganizationEntity, AppInstanceModel, TemplateFileModel, AppPresetModel, LocationModel
 import os
 
 class OrganizationEntityForm(forms.ModelForm):
@@ -8,9 +8,16 @@ class OrganizationEntityForm(forms.ModelForm):
         model = OrganizationEntity
         fields = "__all__"
 
+class LocationForm(forms.ModelForm):
+    class Meta:
+        model = LocationModel
+        fields = "__all__"
+        widgets = {
+            "info": forms.Textarea()
+        }
+
 def update_instance_template_file_selection():
     files = os.listdir(settings.INSTANCE_TEMPLATE_FILES_DIR)
-
     template_files = TemplateFileModel.objects.all()
 
     for tf in template_files:
@@ -39,7 +46,7 @@ class AppInstanceForm(forms.ModelForm):
 
     class Meta:
         model = AppInstanceModel
-        fields = ["app_name", "url_path", "owner_org", "instance_directories",
+        fields = ["app_name", "url_path", "location", "instance_directories",
                   "instance_labels", "instance_volumes", "instance_environment_variables"]
         widgets = {
             "instance_directories": forms.HiddenInput(),
@@ -77,7 +84,7 @@ class AppInstanceForm(forms.ModelForm):
             # Don't show compose file or container image fields when editing. They can't be changed anyway.
             if self.using_compose:
                 self.fields["compose_file"] = forms.FileField(label="Docker compose YAML file", widget=forms.FileInput(attrs={"accept": ".yaml, .yml"}))
-                self.order_fields(["app_name", "url_path", "owner_org", "compose_file", "template_files"])
+                self.order_fields(["app_name", "url_path", "location", "compose_file", "template_files"])
             else:
                 self.fields["container_image"] = \
                         forms.CharField(label="Docker container image name", max_length=50,
@@ -87,7 +94,7 @@ class AppInstanceForm(forms.ModelForm):
                                         required=False,
                                         help_text="The user must exist in the container. \"root\" or an empty user will run the container as the root user.",
                                         widget=forms.TextInput(attrs={"placeholder": "username"}))
-                self.order_fields(["app_name", "url_path", "owner_org", "container_image", "template_files"])
+                self.order_fields(["app_name", "url_path", "location", "container_image", "template_files"])
 
     def clean(self):
         cleaned_data = super().clean()

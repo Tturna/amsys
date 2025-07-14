@@ -1,10 +1,13 @@
+from typing import List, Tuple
 from django.shortcuts import render, reverse, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, HttpResponseForbidden, HttpResponseBadRequest, JsonResponse
+from django.core.files.uploadedfile import UploadedFile
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
+from django.forms.models import model_to_dict
 from django import forms as django_forms
-from .models import AppInstanceModel, AppConnectionModel, AppPresetModel, OrganizationEntity, AppStatusEnum
+from .models import AppInstanceModel, AppConnectionModel, AppPresetModel, LocationModel, OrganizationEntity, AppStatusEnum, TemplateFileModel
 from . import forms
 
 from subprocess import run
@@ -146,9 +149,11 @@ def get_instance_statuses(instances=None):
 def index(request):
     instance_statuses = get_instance_statuses()
     organizations = OrganizationEntity.objects.all()
+    locations = LocationModel.objects.all()
 
     context = {
         "organizations": organizations,
+        "locations": locations,
         "instance_statuses": instance_statuses,
         "is_proxy_running": is_proxy_running()
     }
@@ -159,15 +164,45 @@ def index(request):
     return render(request, "index.html", context)
 
 @login_required
+def organizations(request):
+    orgs = OrganizationEntity.objects.all()
+
+    return render(request, "organizations.html", { "organizations": orgs })
+
+@login_required
+def locations(request):
+    locations = LocationModel.objects.all()
+    organizations = OrganizationEntity.objects.all()
+
+    context = {
+        "locations": locations,
+        "organizations": organizations,
+        "is_proxy_running": is_proxy_running()
+    }
+
+    return render(request, "locations.html", context)
+
+@login_required
+def presets(request):
+    presets = AppPresetModel.objects.all()
+    locations = LocationModel.objects.all()
+    print(presets)
+
+    context = {
+        "presets": presets,
+        "locations": locations
+    }
+
+    return render(request, "presets.html", context)
+
+@login_required
 def view_organization(request, org_name):
     organization = get_object_or_404(OrganizationEntity, org_name=org_name)
-    connected_apps = AppInstanceModel.objects.filter(owner_org=organization)
-    instance_statuses = get_instance_statuses(instances=connected_apps)
+    locations = LocationModel.objects.filter(owner_org=organization)
 
     context = {
         "org": organization,
-        "connected_apps": connected_apps,
-        "instance_statuses": instance_statuses,
+        "locations": locations,
         "is_proxy_running": is_proxy_running()
     }
 
@@ -175,6 +210,23 @@ def view_organization(request, org_name):
         del request.session["preset"]
 
     return render(request, "view_organization.html", context)
+
+@login_required
+def view_location(request, location_name):
+    location = get_object_or_404(LocationModel, location_name=location_name)
+    connected_apps = AppInstanceModel.objects.filter(location=location)
+    instance_statuses = get_instance_statuses(connected_apps)
+
+    context = {
+        "location": location,
+        "instance_statuses": instance_statuses,
+        "is_proxy_running": is_proxy_running()
+    }
+
+    if "preset" in request.session:
+        del request.session["preset"]
+
+    return render(request, "view_location.html", context)
 
 @login_required
 @permission_required("main.add_organizationentitymodel")
@@ -197,25 +249,84 @@ def create_organization(request):
 
     return HttpResponseRedirect(reverse("index"))
 
-def create_app_from_image(request, form, app_name, url_path, api_token, app_instance, instance_path, template_files):
-    container_image = form.cleaned_data["container_image"]
-    container_user = form.cleaned_data["container_user"]
+@login_required
+@permission_required("main.delete_organizationentity")
+def remove_organization(request, organization_pk):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
 
+    org = get_object_or_404(OrganizationEntity, pk=organization_pk)
+    org.delete()
+
+    return HttpResponse(status=204)
+
+@login_required
+@permission_required("main.add_organizationentitymodel")
+def create_location(request):
+    if request.method == "GET":
+        form = forms.LocationForm()
+
+        return render(request, "create_location.html", { "form": form })
+
+    if request.method == "POST":
+        form = forms.LocationForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+
+            return HttpResponseRedirect(reverse("index"))
+        else:
+            messages.error(request, "Invalid form")
+            return render(request, "create_location.html", { "form": form })
+
+    return HttpResponseRedirect(reverse("index"))
+
+@login_required
+@permission_required("main.delete_locationmodel")
+def remove_location(request, location_pk):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    location = get_object_or_404(LocationModel, pk=location_pk)
+    location.delete()
+
+    return HttpResponse(status=204)
+
+class ImageBasedAppAdvancedSettings:
+    def __init__(self, env_vars = [], labels = [], volumes = []) -> None:
+        self.env_vars: List[Tuple[str, str]] = env_vars
+        self.labels: List[Tuple[str, str]] = labels
+        self.volumes: List[Tuple[str, str]] = volumes
+
+    @classmethod
+    def from_instance(cls, instance: AppInstanceModel) -> 'ImageBasedAppAdvancedSettings':
+        env_dict = json.loads(instance.instance_environment_variables)
+        labels_dict = json.loads(instance.instance_labels)
+        volumes_dict = json.loads(instance.instance_volumes)
+        env_vars = [(key, env_dict[key]) for key in env_dict.keys()]
+        labels = [(key, labels_dict[key]) for key in labels_dict.keys()]
+        volumes = [(key, volumes_dict[key]) for key in volumes_dict.keys()]
+
+        return cls(env_vars=env_vars, labels=labels, volumes=volumes)
+
+    def set_env_vars(self, env_keys: List[str], env_vals: List[str]) -> None:
+        self.env_vars = list(zip(env_keys, env_vals))
+
+    def set_labels(self, label_keys: List[str], label_vals: List[str]) -> None:
+        self.labels = list(zip(label_keys, label_vals))
+
+    def set_volumes(self, volume_keys: List[str], volume_vals: List[str]) -> None:
+        self.volumes = list(zip(volume_keys, volume_vals))
+
+def create_app_from_image(advanced_settings: ImageBasedAppAdvancedSettings, container_image: str, container_user: str, app_name: str, url_path: str, api_token: str, app_instance: AppInstanceModel, instance_path: str, template_files: List[TemplateFileModel], preset_name: str | None = None):
     if container_user == "root" or container_user == "root:root":
         container_user = ""
 
-    env_keys = request.POST.getlist("env_entry_key[]")
-    env_vals = request.POST.getlist("env_entry_val[]")
-    label_keys = request.POST.getlist("label_entry_key[]")
-    label_vals = request.POST.getlist("label_entry_val[]")
-    volume_keys = request.POST.getlist("volume_entry_key[]")
-    volume_vals = request.POST.getlist("volume_entry_val[]")
+    # preset_name = request.POST.get("preset_name", None)
 
-    preset_name = request.POST.get("preset_name", None)
-
-    env_entries = list(zip(env_keys, env_vals))
-    label_entries = list(zip(label_keys, label_vals))
-    volume_entries = list(zip(volume_keys, volume_vals))
+    env_entries = advanced_settings.env_vars
+    label_entries = advanced_settings.labels
+    volume_entries = advanced_settings.volumes
 
     env = {
         # TODO: Rename this env var to AMSYS_URL_PATH.
@@ -319,13 +430,11 @@ def create_app_from_image(request, form, app_name, url_path, api_token, app_inst
 
         preset.save()
         preset.template_files.set(template_files)
+        preset.save()
 
-    del request.session["preset"]
     return True
 
-def create_app_from_compose(request, instance_path, app_name):
-    compose_file = request.FILES["compose_file"]
-
+def create_app_from_compose(compose_file: UploadedFile, instance_path: str, app_name: str):
     with open(f"{instance_path}/docker-compose.yaml", "wb+") as destination:
         for chunk in compose_file.chunks():
             destination.write(chunk)
@@ -408,9 +517,20 @@ def create_app_instance(request, using_compose=False):
             return render(request, "create_compose_instance.html", { "form": form })
 
     url_path = form.cleaned_data["url_path"]
-    owner_org = form.cleaned_data["owner_org"]
+
+    if len(AppInstanceModel.objects.filter(url_path=url_path)) > 0:
+        messages.error(request, f"App with URL path '{url_path}' already exists.")
+
+        if not using_compose:
+            return render(request, "create_instance.html", { "form": form })
+        else:
+            return render(request, "create_compose_instance.html", { "form": form })
+
+    location = form.cleaned_data["location"]
     transmit_destinations = form.cleaned_data["transmit_destinations"]
     template_files = form.cleaned_data["template_files"]
+    container_image = form.cleaned_data.get("container_image", "")
+    container_user = form.cleaned_data.get("container_user", "")
 
     if (len(url_path) == 0):
         url_path = app_name
@@ -429,9 +549,10 @@ def create_app_instance(request, using_compose=False):
     api_token = secrets.token_urlsafe(16)
 
     app_instance = AppInstanceModel(app_name=app_name, url_path=url_path,
-                                    owner_org=owner_org, status=AppStatusEnum.RUNNING.value,
+                                    location=location, status=AppStatusEnum.RUNNING.value,
                                     created_at=datetime_now, api_token=api_token,
-                                    using_compose=using_compose)
+                                    using_compose=using_compose, container_image=container_image,
+                                    container_user=container_user)
     app_instance.save()
     app_instance.template_files.set(template_files)
 
@@ -455,9 +576,25 @@ def create_app_instance(request, using_compose=False):
     started_successfully = False
 
     if using_compose:
-        started_successfully = create_app_from_compose(request, instance_path, app_name)
+        compose_file = request.FILES["compose_file"]
+        started_successfully = create_app_from_compose(compose_file, instance_path, app_name)
     else:
-        started_successfully = create_app_from_image(request, form, app_name, url_path, api_token, app_instance, instance_path, template_files)
+        advanced_settings = ImageBasedAppAdvancedSettings()
+
+        env_keys = request.POST.getlist("env_entry_key[]")
+        env_vals = request.POST.getlist("env_entry_val[]")
+        label_keys = request.POST.getlist("label_entry_key[]")
+        label_vals = request.POST.getlist("label_entry_val[]")
+        volume_keys = request.POST.getlist("volume_entry_key[]")
+        volume_vals = request.POST.getlist("volume_entry_val[]")
+
+        advanced_settings.set_env_vars(env_keys, env_vals)
+        advanced_settings.set_labels(label_keys, label_vals)
+        advanced_settings.set_volumes(volume_keys, volume_vals)
+
+        preset_name = request.POST.get("preset_name", None)
+
+        started_successfully = create_app_from_image(advanced_settings, container_image, container_user, app_name, url_path, api_token, app_instance, instance_path, template_files, preset_name)
 
     if not started_successfully:
         messages.error(request, "App didn't start succesfully")
@@ -468,6 +605,8 @@ def create_app_instance(request, using_compose=False):
             return render(request, "create_instance.html", { "form": form })
         else:
             return render(request, "create_compose_instance.html", { "form": form })
+
+    del request.session["preset"]
 
     # Dashboard will always know which instances can transmit to which.
     # Instances should always ask what they can do before trying to do things.
@@ -495,15 +634,33 @@ def apply_preset(request):
     return HttpResponseRedirect(reverse("create_app_instance"))
 
 @login_required
+@permission_required("main.delete_apppresetmodel")
+def remove_preset(request, preset_pk):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    preset = get_object_or_404(AppPresetModel, pk=preset_pk)
+    preset.delete()
+
+    return HttpResponse(status=204)
+
+@login_required
 @permission_required("main.change_appinstancemodel")
-def stop_instance(request, app_name):
+def stop_instance(request, app_name, should_kill=False):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
     docker_client = docker.from_env()
 
     instance_path = get_instance_path(app_name)
 
     if (instance.using_compose):
-        stop_compose_result = run(["docker", "compose", "-p", app_name, "stop"], cwd=instance_path, capture_output=True, text=True)
+        command = None
+
+        if should_kill:
+            command = ["docker", "compose", "-p", app_name, "kill"]
+        else:
+            command = ["docker", "compose", "-p", app_name, "stop"]
+
+        stop_compose_result = run(command, cwd=instance_path, capture_output=True, text=True)
 
         if stop_compose_result.returncode != 0:
             messages.error(request, f"App failed to stop. Error code {stop_compose_result.returncode}")
@@ -513,7 +670,11 @@ def stop_instance(request, app_name):
     else:
         try:
             app_container = docker_client.containers.get(app_name)
-            app_container.stop()
+
+            if should_kill:
+                app_container.kill()
+            else:
+                app_container.stop()
         except docker.errors.NotFound:
             messages.error(request, "App container not found! Some data may be lost.")
             instance.status = AppStatusEnum.MISSING.value
@@ -586,12 +747,8 @@ def restart_instance(request, app_name):
             app_container.remove(v=True, force=True)
         except docker.errors.NotFound:
             messages.error(request, "App container not found! Some data may be lost.")
-            instance.status = AppStatusEnum.MISSING.value
-            instance.save()
-
-            return HttpResponse(status=204)
         except docker.errors.APIError:
-            messages.error(request, "Container API error. Try again later.")
+            messages.error(request, "Container API error. Try again later or contact an administrator.")
             return HttpResponse(status=500)
 
     # TODO: Ensure the app name can't change the instance path to something weird
@@ -599,8 +756,41 @@ def restart_instance(request, app_name):
 
     instance.status = AppStatusEnum.REMOVED.value
     instance.save()
+
+    os.makedirs(instance_path)
+
+    for template_file in instance.template_files.all():
+        shutil.copy(template_file.filepath, f"{instance_path}/{template_file.filename}")
+
+    dir_entries = json.loads(instance.instance_directories)
+
+    for dir_path in dir_entries:
+        path_in_instance = f"{instance_path}/{dir_path}"
+        if not os.path.exists(path_in_instance):
+            os.makedirs(path_in_instance)
+
+    started_successfully = False
     
-    # TODO: Recreate instance from saved parameters
+    if (instance.using_compose):
+        compose_file = request.FILES["compose_file"]
+        started_successfully = create_app_from_compose(compose_file, instance_path, instance.app_name)
+    else:
+
+        advanced_settings = ImageBasedAppAdvancedSettings.from_instance(instance=instance)
+        started_successfully = create_app_from_image(advanced_settings, instance.container_image,
+                              instance.container_user, instance.app_name, instance.url_path,
+                              instance.api_token, instance, instance_path, instance.template_files.all())
+
+    if not started_successfully:
+        messages.error(request, "App didn't restart succesfully")
+        print("app restart failed")
+        instance.status = AppStatusEnum.ERROR.value
+        instance.save()
+
+        return HttpResponseRedirect(reverse("index"))
+
+    messages.success(request, "App restarted successfully")
+    return HttpResponseRedirect(reverse("index"))
 
 @login_required
 @permission_required("main.delete_appinstancemodel")
@@ -624,7 +814,6 @@ def remove_instance(request, app_name):
             app_container.remove(v=True, force=True)
         except docker.errors.NotFound:
             messages.error(request, "App container not found! Removing data.")
-            return HttpResponse(status=204)
         except docker.errors.APIError:
             messages.error(request, "Container API error. Try again later.")
             return HttpResponse(status=500)
@@ -715,11 +904,47 @@ def forget_instance(request, app_name):
 
 @login_required
 def map(request):
-    orgs = OrganizationEntity.objects.all().values("org_name", "latitude", "longitude")
-    orgs_data = json.dumps(list(orgs), default=str)
+    instances = AppInstanceModel.objects.all()
+    location_entries = list(LocationModel.objects.values())
+
+    for index in range(len(location_entries)):
+        location_entries[index].update({ "apps": [] })
+
+    for inst in instances:
+        location_dict = model_to_dict(inst.location)
+        inst_dict = model_to_dict(inst, fields=["app_name", "url_path"])
+
+        for entry in location_entries:
+            if location_dict["id"] == entry["id"]:
+                apps = entry["apps"]
+                apps.append(inst_dict)
+                entry["apps"] = apps
+                break
+
+    locations_data = json.dumps(location_entries, default=str)
+
+    connections = AppConnectionModel.objects.all()
+    connection_pair_coordinates = []
+
+    for connection in connections:
+        instance_from = connection.instance_from
+        instance_to = connection.instance_to
+        location_from = instance_from.location
+        location_to = instance_to.location
+
+        if location_from is location_to:
+            continue
+
+        from_coordinates = [location_from.latitude, location_from.longitude]
+        to_coordinates = [location_to.latitude, location_to.longitude]
+        pair = [from_coordinates, to_coordinates]
+        connection_pair_coordinates.append(pair)
+
+    connections_data = json.dumps(connection_pair_coordinates, default=str)
 
     context = {
-        "orgs": orgs_data
+        "locations": locations_data,
+        "connections": connections_data
     }
 
     if "preset" in request.session:

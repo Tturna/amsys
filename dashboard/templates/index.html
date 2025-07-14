@@ -37,14 +37,14 @@
         </div>
         {% endif %}
 
-        {% if organizations %}
+        {% if locations %}
             {% if perms.main.add_appinstancemodel %}
             <a href="{% url 'create_app_instance' %}"><button class="btn btn-primary">Create new instance</button></a>
             {% else %}
             <button class="btn btn-primary disabled" disabled="disabled">Create new instance</button>
             {% endif %}
         {% else %}
-            <button class="btn btn-primary disabled" disabled="disabled">Create new instance</button><span style="color: red"> No organizations defined</span>
+            <button class="btn btn-primary disabled" disabled="disabled">Create new instance</button><span style="color: red"> No locations defined</span>
         {% endif %}
 
         {% for status_entry in instance_statuses %}
@@ -106,8 +106,18 @@
                         <div class="alert alert-success p-2">{{ status_entry.status_message }}</div>
                         {% endif %}
                     </div>
-                    <div class="col-4">
+                    <div class="col-4 vstack">
                         <p class="card-text text-end">Created: {{ status_entry.instance.created_at }}</p>
+                        {% if status_entry.status == "RUNNING" %}
+                        <div class="dropdown mt-auto text-end">
+                            <button class="btn btn-sm btn-clear" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <img src="{% static 'more_vert.svg' %}" alt="More" width="24" />
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><button class="btn btn-sm btn-outline-danger ms-2" id="{{ status_entry.instance.app_name }}_kill_button" onclick="call_kill_instance('{{ status_entry.instance.app_name }}')">Kill</button></li>
+                            </ul>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

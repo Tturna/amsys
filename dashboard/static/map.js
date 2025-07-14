@@ -5,12 +5,32 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 }).addTo(map);
 
-orgs.forEach(org => {
-    let name = org["org_name"];
-    let lat = parseFloat(org["latitude"]);
-    let lng = parseFloat(org["longitude"]);
+// Assume the template defines locations and connections
+locations.forEach(location => {
+    let name = location["location_name"];
+    let lat = parseFloat(location["latitude"]);
+    let lng = parseFloat(location["longitude"]);
+    let info = location["info"];
+    let code = location["code"];
+    let apps = location["apps"];
+
+    let code_string = code && code.length > 0 ? ` - ${code}` : "";
+    let info_string = info && info.length > 0 ? `${info}<br>` : "";
+    let apps_string;
+
+    if (apps.length > 0) {
+        apps_string = "<strong>Apps:</strong><br>" + apps
+            .map(app => `<a href=/view_instance/${app["app_name"]}>${app["app_name"]}</a>`)
+            .join("<br>")
+    } else {
+        apps_string = "No apps in this location."
+    }
 
     L.marker([lat, lng]).addTo(map)
-        .bindPopup(`${name}<br>${lat},${lng}`);
+        .bindPopup(`<strong>${name}</strong>${code_string}<br>${lat},${lng}<br>${info_string}${apps_string}`);
 });
 
+connections.forEach(connection => {
+    var polyLine = L.polyline(connection, { color: "red" });
+    polyLine.addTo(map);
+});
