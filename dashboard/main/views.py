@@ -186,7 +186,6 @@ def locations(request):
 def presets(request):
     presets = AppPresetModel.objects.all()
     locations = LocationModel.objects.all()
-    print(presets)
 
     context = {
         "presets": presets,
@@ -423,6 +422,7 @@ def create_app_from_image(advanced_settings: ImageBasedAppAdvancedSettings, cont
         preset = AppPresetModel(
             preset_name=preset_name,
             container_image=container_image,
+            container_user=container_user,
             instance_directories=app_instance.instance_directories,
             instance_labels=app_instance.instance_labels,
             instance_volumes=app_instance.instance_volumes,
@@ -464,6 +464,7 @@ def create_app_instance(request, using_compose=False):
                 preset = get_object_or_404(AppPresetModel, pk=init_preset)
                 form = forms.AppInstanceForm(initial={
                         "container_image": preset.container_image,
+                        "container_user": preset.container_user,
                         "template_files": preset.template_files.all(),
                         "instance_directories": preset.instance_directories,
                         "instance_labels": preset.instance_labels,
@@ -474,7 +475,8 @@ def create_app_instance(request, using_compose=False):
             else:
                 form = forms.AppInstanceForm(using_compose=using_compose)
                 form.fields["preset_name"] = django_forms.CharField(max_length=20, required=True)
-                form.order_fields(["preset_name"])
+                # Insert preset name into crispy forms layout. See the full layout in forms.py
+                form.helper.layout.insert(0, "preset_name")
 
             preset_form = forms.AppPresetForm({"preset": init_preset})
         elif not using_compose:
@@ -564,7 +566,7 @@ def create_app_instance(request, using_compose=False):
     dir_vals = request.POST.getlist("dir_entry[]")
     dir_entries = list(dir_vals)
 
-    app_instance.instance_directories = str(dir_entries)
+    app_instance.instance_directories = str(dir_entries).replace("'", "\"")
     app_instance.save()
 
     # TODO: make sure the user doesn't create any weird directories outside the instance dir

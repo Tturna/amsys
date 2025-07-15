@@ -68,6 +68,7 @@ class AppConnectionModel(models.Model):
 class AppPresetModel(models.Model):
     preset_name = models.CharField(max_length=20, verbose_name="Preset name")
     container_image = models.CharField(max_length=20)
+    container_user = models.CharField(max_length=50)
     template_files = models.ManyToManyField(TemplateFileModel)
     # These should contain JSON formatted data:
     instance_directories = models.CharField(max_length=1024, blank=True)

@@ -8,11 +8,10 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
-App name validation in instance creation form.
+Either take container image field out of advanced settings in instance creation or
+make it a visible error when its value is missing.
 
-Make it so any instance creation form fields can be placed in the advanced settings section
-so the user doesn't need to see stuff like the "container user" field if they don't care
-about it.
+App name validation in instance creation form.
 
 Go through all used env vars and document them. Make it so no AMSYS vars include
 the ADDMAN name.
