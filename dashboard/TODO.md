@@ -10,10 +10,6 @@ Generalize app instance creation to support other kinds of apps.
 
 App name validation in instance creation form.
 
-Make it so any instance creation form fields can be placed in the advanced settings section
-so the user doesn't need to see stuff like the "container user" field if they don't care
-about it.
-
 Go through all used env vars and document them. Make it so no AMSYS vars include
 the ADDMAN name.
 

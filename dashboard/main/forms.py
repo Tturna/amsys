@@ -1,6 +1,9 @@
 from django import forms
 from django.conf import settings
 from .models import OrganizationEntity, AppInstanceModel, TemplateFileModel, AppPresetModel, LocationModel
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import HTML, Layout, Div, Submit
+from crispy_forms.bootstrap import StrictButton
 import os
 
 class OrganizationEntityForm(forms.ModelForm):
@@ -57,9 +60,7 @@ class AppInstanceForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.using_compose = kwargs.get("using_compose", False)
-        self.create_new_preset = kwargs.get("create_new_preset", False)
         kwargs.pop("using_compose", None)
-        kwargs.pop("create_new_preset", None)
 
         super().__init__(*args, **kwargs)
 
@@ -68,6 +69,122 @@ class AppInstanceForm(forms.ModelForm):
         instance_arg = kwargs.get("instance", None)
         if (instance_arg):
             self.instance = instance_arg
+
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "app_name",
+            "url_path",
+            "location",
+            StrictButton("Advanced settings", css_id="toggle_advanced", css_class="btn btn-sm btn-secondary mb-5 d-block"),
+            # TODO: Refactor with maybe more actual crispy forms layout objects and
+            # possibly some function or template object for the repetitive bits.
+            Div(
+                "template_files",
+                "instance_directories", # hidden field
+                "instance_labels", # hidden field
+                "instance_volumes", # hidden field
+                "instance_environment_variables", # hidden field
+                HTML("""
+                     <fieldset id="dir-entries" class="my-5">
+                        <legend class="form-label">Instance directories</legend>
+                        <div class="row justify-content-between">
+                            <label class="form-label col-4">Directory path (relative)</label>
+                            <div class="col-4">
+                                <button id="dir-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
+                            </div>
+                        </div>
+                        <div class="entry d-none">
+                            <div class="row justify-content-between">
+                                <div class="col-4">
+                                    <input class="form-control" name="dir_entry[]" type="text" placeholder="mailbox/receive" disabled />
+                                </div>
+                                <div class="col-4 align-self-center">
+                                    <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                </div>
+                            </div>
+                        <div>
+                    </fieldset>
+                """),
+                HTML("""
+                    <fieldset id="label-entries" class="my-5">
+                        <legend class="form-label">Container labels</legend>
+                        <div class="row">
+                            <label class="form-label col-4">Label</label>
+                            <label class="form-label col-4">Value</label>
+                            <div class="col-4">
+                                <button id="label-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
+                            </div>
+                        </div>
+                        <div class="entry d-none">
+                            <div class="row">
+                                <div class="col-4">
+                                    <input class="form-control" name="label_entry_key[]" type="text" placeholder="traefik.enable" disabled />
+                                </div>
+                                <div class="col-4">
+                                    <input class="form-control" name="label_entry_val[]" type="text" placeholder="true" disabled />
+                                </div>
+                                <div class="col-4 align-self-center">
+                                    <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                </div>
+                            </div>
+                        <div>
+                    </fieldset>
+                """),
+                HTML("""
+                    <fieldset id="volume-entries" class="my-5">
+                        <legend class="form-label">Container volumes</legend>
+                        <div class="row">
+                            <label class="form-label col-4">Source (relative)</label>
+                            <label class="form-label col-4">Destination (absolute)</label>
+                            <div class="col-4">
+                                <button id="volume-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
+                            </div>
+                        </div>
+                        <div class="entry d-none">
+                            <div class="row">
+                                <div class="col-4">
+                                    <input class="form-control" name="volume_entry_key[]" type="text" placeholder="config/site-config.json" disabled />
+                                </div>
+                                <div class="col-4">
+                                    <input class="form-control" name="volume_entry_val[]" type="text" placeholder="app/site-config.json" disabled />
+                                </div>
+                                <div class="col-4 align-self-center">
+                                    <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                """),
+                HTML("""
+                    <fieldset id="env-entries" class="my-5">
+                        <legend class="form-label">Container environment variables</legend>
+                        <div class="row">
+                            <label class="form-label col-4">Key</label>
+                            <label class="form-label col-4">Value</label>
+                            <div class="col-4">
+                                <button id="env-add" class="btn btn-sm btn-primary" style="padding: .1rem .75rem; width: 5rem;">Add</button>
+                            </div>
+                        </div>
+                        <div class="entry d-none">
+                            <div class="row">
+                                <div class="col-4">
+                                    <input class="form-control" name="env_entry_key[]" type="text" placeholder="USERNAME" disabled />
+                                </div>
+                                <div class="col-4">
+                                    <input class="form-control" name="env_entry_val[]" type="text" placeholder="Example" disabled />
+                                </div>
+                                <div class="col-4 align-self-center">
+                                    <button class="btn btn-sm btn-outline-danger remove-entry" style="padding: .1rem .75rem; width: 5rem;">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                """),
+                css_id = "advanced",
+                css_class = "d-none"
+            ),
+            Submit("submit", "Create")
+        )
 
         self.uneditable_fields = ["app_name", "url_path", "template_files"]
 
@@ -84,7 +201,7 @@ class AppInstanceForm(forms.ModelForm):
             # Don't show compose file or container image fields when editing. They can't be changed anyway.
             if self.using_compose:
                 self.fields["compose_file"] = forms.FileField(label="Docker compose YAML file", widget=forms.FileInput(attrs={"accept": ".yaml, .yml"}))
-                self.order_fields(["app_name", "url_path", "location", "compose_file", "template_files"])
+                self.helper.layout[-2].insert(0, "compose_file")
             else:
                 self.fields["container_image"] = \
                         forms.CharField(label="Docker container image name", max_length=50,
@@ -94,7 +211,9 @@ class AppInstanceForm(forms.ModelForm):
                                         required=False,
                                         help_text="The user must exist in the container. \"root\" or an empty user will run the container as the root user.",
                                         widget=forms.TextInput(attrs={"placeholder": "username"}))
-                self.order_fields(["app_name", "url_path", "location", "container_image", "template_files"])
+
+                self.helper.layout[-2].insert(0, "container_user")
+                self.helper.layout[-2].insert(0, "container_image")
 
     def clean(self):
         cleaned_data = super().clean()
