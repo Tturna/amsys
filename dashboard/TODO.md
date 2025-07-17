@@ -8,8 +8,12 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
-Either take container image field out of advanced settings in instance creation or
-make it a visible error when its value is missing.
+Make it so a container can be removed without removing its data. When a container is removed,
+the startup settings like environment variables can be changed.
+
+Location status
+
+AMSYS title from env var
 
 App name validation in instance creation form.
 

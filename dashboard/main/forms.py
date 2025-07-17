@@ -213,7 +213,7 @@ class AppInstanceForm(forms.ModelForm):
                                         widget=forms.TextInput(attrs={"placeholder": "username"}))
 
                 self.helper.layout[-2].insert(0, "container_user")
-                self.helper.layout[-2].insert(0, "container_image")
+                self.helper.layout.insert(3, "container_image")
 
     def clean(self):
         cleaned_data = super().clean()
