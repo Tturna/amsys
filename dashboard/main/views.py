@@ -1073,16 +1073,20 @@ def edit_instance(request, app_name):
         dynamic_field_errors = []
 
         if instance.status != AppStatusEnum.STOPPED.value and instance.status != AppStatusEnum.REMOVED.value:
-            if normalize_empty_field_value(instance.instance_directories) != normalize_empty_field_value(new_dirs):
+            # if normalize_empty_field_value(instance.instance_directories) != normalize_empty_field_value(new_dirs):
+            if normalize_empty_field_value(new_dirs) is not None:
                 dynamic_field_errors.append("Can't edit directories when instance is not stopped.")
 
-            if normalize_empty_field_value(instance.instance_environment_variables) != normalize_empty_field_value(new_env):
+            # if normalize_empty_field_value(instance.instance_environment_variables) != normalize_empty_field_value(new_env):
+            if normalize_empty_field_value(new_env) is not None:
                 dynamic_field_errors.append("Can't edit container environment variables when instance is not stopped.")
 
-            if normalize_empty_field_value(instance.instance_labels) != normalize_empty_field_value(new_labels):
+            # if normalize_empty_field_value(instance.instance_labels) != normalize_empty_field_value(new_labels):
+            if normalize_empty_field_value(new_labels) is not None:
                 dynamic_field_errors.append("Can't edit container labels when instance is not stopped.")
 
-            if normalize_empty_field_value(instance.instance_volumes) != normalize_empty_field_value(new_volumes):
+            # if normalize_empty_field_value(instance.instance_volumes) != normalize_empty_field_value(new_volumes):
+            if normalize_empty_field_value(new_volumes) is not None:
                 dynamic_field_errors.append("Can't edit container volumes when instance is not stopped.")
 
         if (form.is_valid() and len(dynamic_field_errors) == 0):
@@ -1099,7 +1103,7 @@ def edit_instance(request, app_name):
             if "compose_file" in form.cleaned_data.keys():
                 instance.compose_file = form.cleaned_data["compose_file"]
 
-            template_files = list(form.cleaned_data["template_files"])
+            template_files = list(form.cleaned_data["template_files"].all())
             instance_path = get_instance_path(instance.app_name)
 
             set_instance_advanced_settings(instance, advanced_settings)

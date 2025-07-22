@@ -12,6 +12,7 @@ locations.forEach(location => {
     let lng = parseFloat(location["longitude"]);
     let info = location["info"];
     let code = location["code"];
+    let status = location["status"];
     let apps = location["apps"];
 
     let code_string = code && code.length > 0 ? ` - ${code}` : "";
@@ -27,7 +28,7 @@ locations.forEach(location => {
     }
 
     L.marker([lat, lng]).addTo(map)
-        .bindPopup(`<strong>${name}</strong>${code_string}<br>${lat},${lng}<br>${info_string}${apps_string}`);
+        .bindPopup(`<strong>${name}</strong>${code_string}<br>Status: ${status}<br>${lat}, ${lng}<br>${info_string}${apps_string}`);
 });
 
 connections.forEach(connection => {

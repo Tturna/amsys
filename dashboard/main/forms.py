@@ -82,6 +82,7 @@ class AppInstanceForm(forms.ModelForm):
             "app_name",
             "url_path",
             "location",
+            "transmit_destinations",
             StrictButton("Advanced settings", css_id="toggle_advanced", css_class="btn btn-sm btn-secondary mb-5 d-block"),
             # TODO: Refactor with maybe more actual crispy forms layout objects and
             # possibly some function or template object for the repetitive bits.
@@ -250,7 +251,6 @@ class AppInstanceForm(forms.ModelForm):
             if self.instance.status != AppStatusEnum.STOPPED.value and self.instance.status != AppStatusEnum.REMOVED.value:
 
                 for field in self.uneditable_fields:
-                    break
                     if not hasattr(self.instance, field):
                         continue
 
