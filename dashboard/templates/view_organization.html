@@ -26,9 +26,14 @@
                 <div class="row">
                     <div class="col-8">
                         <h4 class="card-title">{{ location.location_name }}
-                            <span class="badge bg-success mx-3" id="{{ location.location_name }}_status">{{ location.code }}</span>
+                            {% if location.status %}
+                            <span class="badge bg-secondary mx-3" id="{{ location.location_name }}_status">{{ location.status }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary mx-3" id="{{ location.location_name }}_status">No status</span>
+                            {% endif %}
                         </h4>
-                        <p class="card-text text-body-secondary">{{ location.owner_org.org_name }} 
+                        <p class="card-text text-body-secondary">Code: {{ location.code }} 
+                        <p class="card-text text-body-secondary">Organization: {{ location.owner_org.org_name }} 
                         </p>
 
                         <div class="mb-3">

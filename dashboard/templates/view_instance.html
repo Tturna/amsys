@@ -10,26 +10,27 @@
         <h2>{{ instance.app_name }}</h2>
         <p>
             Location:
-            <a href="{% url 'view_location' instance.location.location_name %}">{{ instance.location.location_name }}</a>
+            <p><a class="btn btn-sm btn-success" href="{% url 'view_location' instance.location.location_name %}">{{ instance.location.location_name }}</a></p>
         </p>
         <p>
             Connected organization:
-            <a href="{% url 'view_organization' instance.location.owner_org.org_name %}">{{ instance.location.owner_org.org_name }}</a>
+            <p><a class="btn btn-sm btn-success" href="{% url 'view_organization' instance.location.owner_org.org_name %}">{{ instance.location.owner_org.org_name }}</a></p>
         </p>
         <p>Hosted at <a href="http://localhost/{{ instance.url_path }}">http://localhost/{{ instance.url_path }}</a></p>
-
-        <p>Instance status: {{ instance.status }}</p>
-        {% comment %}
-        TODO: Add instance status stuff here once instance cards are separated out of templates.
-        {% endcomment %}
-
-        <p>Created at {{ instance.created_at }}</p>
 
         {% if perms.main.change_appinstancemodel %}
             <a class="btn btn-secondary" href="{% url 'edit_instance' instance.app_name %}">Edit</a>
         {% else %}
             <button class="btn btn-secondary disabled" disabled="disabled">Edit</button>
         {% endif %}
+    </div>
+    <div class="col">
+        <p>Created at {{ instance.created_at }}</p>
+
+        <p>Instance status: {{ instance.status }}</p>
+        {% comment %}
+        TODO: Add instance status stuff here once instance cards are separated out of templates.
+        {% endcomment %}
 
         {% if destinations %}
         <h3>Can send files to:</h3>
