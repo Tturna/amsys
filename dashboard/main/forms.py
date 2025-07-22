@@ -19,6 +19,13 @@ class LocationForm(forms.ModelForm):
             "info": forms.Textarea()
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        # Prevent crispy from rendering a form element for us. We define it in the template.
+        self.helper.form_tag = False
+
+
 def update_instance_template_file_selection():
     files = os.listdir(settings.INSTANCE_TEMPLATE_FILES_DIR)
     template_files = TemplateFileModel.objects.all()

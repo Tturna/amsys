@@ -10,8 +10,6 @@ Generalize app instance creation to support other kinds of apps.
 
 Separate out app listing so it can be easily used in many places.
 
-Location status
-
 App name validation in instance creation form.
 
 Go through all used env vars and document them. Make it so no AMSYS vars include

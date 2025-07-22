@@ -11,8 +11,19 @@
         <strong>Organization</strong>
         <p><a href="{% url 'view_organization' location.owner_org.org_name %}">{{ location.owner_org.org_name }}</a></p>
 
+        <strong>Status</strong>
+        {% if location.status %}
+        <p>{{ location.status }}</p>
+        {% else %}
+        <p><i>No status set</i></p>
+        {% endif %}
+
         {% if perms.main.delete_locationmodel %}
         <button class="btn btn-outline-danger" onclick="call_remove_location({{ location.pk }})">Remove</button>
+        {% endif %}
+
+        {% if perms.main.change_locationmodel %}
+        <a class="btn btn-secondary" href="{% url 'edit_location' location.location_name %}">Edit</a>
         {% endif %}
     </div>
     <div class="col">

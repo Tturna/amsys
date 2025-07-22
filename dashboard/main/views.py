@@ -237,6 +237,36 @@ def view_location(request, location_name):
     return render(request, "view_location.html", context)
 
 @login_required
+@permission_required("main.change_locationmodel")
+def edit_location(request, location_name):
+    location = get_object_or_404(LocationModel, location_name=location_name)
+
+    if request.method == "GET":
+        form = forms.LocationForm(instance=location)
+
+        context = {
+            "location": location,
+            "form": form
+        }
+
+        return render(request, "edit_location.html", context)
+    elif request.method == "POST":
+        form = forms.LocationForm(request.POST, instance=location)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Instance saved")
+
+            return HttpResponseRedirect(reverse("view_location", kwargs={ "location_name": location.location_name }))
+        else:
+            context = {
+                "location": location,
+                "form": form
+            }
+
+            return render(request, "edit_location.html", context)
+
+@login_required
 @permission_required("main.add_organizationentitymodel")
 def create_organization(request):
     if request.method == "GET":

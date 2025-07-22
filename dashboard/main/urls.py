@@ -11,6 +11,7 @@ urlpatterns = [
     path("presets/", views.presets, name="presets"),
     path("view_organization/<org_name>/", views.view_organization, name="view_organization"),
     path("view_location/<location_name>/", views.view_location, name="view_location"),
+    path("edit_location/<location_name>/", views.edit_location, name="edit_location"),
     path("create_organization/", views.create_organization, name="create_organization"),
     path("create_location/", views.create_location, name="create_location"),
     path("create_app_instance/", views.create_app_instance, name="create_app_instance"),
