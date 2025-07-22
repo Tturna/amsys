@@ -12,8 +12,6 @@ Separate out app listing so it can be easily used in many places.
 
 Location status
 
-AMSYS title from env var
-
 App name validation in instance creation form.
 
 Go through all used env vars and document them. Make it so no AMSYS vars include
