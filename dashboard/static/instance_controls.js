@@ -1,5 +1,5 @@
 function call_stop_instance(app_name) {
-    if (!confirm(`Are you sure you want to stop instance "${app_name}"?`)) {
+    if (!confirm(`Are you sure you want to stop instance "${app_name}"? Mounted data will be preserved.`)) {
         return;
     }
 
@@ -25,8 +25,35 @@ function call_stop_instance(app_name) {
     });
 }
 
+function call_pause_instance(app_name) {
+    if (!confirm(`Are you sure you want to pause instance "${app_name}"?`)) {
+        return;
+    }
+
+    let status_span = document.getElementById(`${app_name}_status`);
+
+    if (status_span) {
+        status_span.innerText = "Pausing...";
+    }
+
+    let pause_button = document.getElementById(`${app_name}_pause_button`);
+
+    if (pause_button) {
+        pause_button.disabled = true;
+    }
+
+    fetch(`/pause_instance/${app_name}`)
+    .then(response => {
+        if (status_span) {
+            status_span.innerText = "Paused";
+        }
+
+        window.location.reload();
+    });
+}
+
 function call_kill_instance(app_name) {
-    if (!confirm(`Are you sure you want to forcibly kill instance "${app_name}"?`)) {
+    if (!confirm(`Are you sure you want to forcibly kill instance "${app_name}"? Mounted data will be preserved.`)) {
         return;
     }
 
@@ -42,10 +69,10 @@ function call_kill_instance(app_name) {
         kill_button.disabled = true;
     }
 
-    fetch(`/stop_instance/${app_name}/True`)
+    fetch(`/pause_instance/${app_name}/True`)
     .then(response => {
         if (status_span) {
-            status_span.innerText = "Stopped";
+            status_span.innerText = "Paused";
         }
 
         window.location.reload();
@@ -66,6 +93,25 @@ function call_start_instance(app_name) {
     }
 
     fetch(`/start_instance/${app_name}`)
+    .then(response => {
+        window.location = "/";
+    });
+}
+
+function call_recreate_instance(app_name) {
+    let status_span = document.getElementById(`${app_name}_status`);
+
+    if (status_span) {
+        status_span.innerText = "Recreating...";
+    }
+
+    let recreate_button = document.getElementById(`${app_name}_recreate_button`);
+
+    if (recreate_button) {
+        recreate_button.disabled = true;
+    }
+
+    fetch(`/recreate_instance/${app_name}`)
     .then(response => {
         window.location = "/";
     });

@@ -32,10 +32,11 @@ class TemplateFileModel(models.Model):
 
 class AppStatusEnum(Enum):
     RUNNING = 1
-    STOPPED = 2
-    MISSING = 3
+    PAUSED  = 2
+    STOPPED = 3
     REMOVED = 4
-    ERROR   = 5
+    MISSING = 5
+    ERROR   = 6
 
     @classmethod
     def as_tuple_list(cls):

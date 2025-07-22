@@ -8,8 +8,7 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
-Make it so a container can be removed without removing its data. When a container is removed,
-the startup settings like environment variables can be changed.
+Separate out app listing so it can be easily used in many places.
 
 Location status
 
@@ -28,6 +27,8 @@ Make it so the index page, view instance page etc. don't hard code the instance 
 to localhost.
 
 Remove hard coded fetch and window location paths from JS.
+
+Add automated testing.
 
 Make it so files created by compose based apps can be deleted by the master app.
 For image based apps, this is done by setting the container's UID to match the UID
