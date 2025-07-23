@@ -11,17 +11,19 @@ Generalize app instance creation to support other kinds of apps.
 App status on map
 
 Separate out app listing so it can be easily used in many places.
+- Show app location and connected organization in the listed cards.
+- Fix "created at" (timezone).
+
+Make it so the index page, view instance page etc. don't hard code the instance domain
+to localhost.
+
+Remove hard coded fetch and window location paths from JS.
 
 App name validation in instance creation form.
 
 Add instructions and validation for compose files.
 
 Consider refactoring views.py and splitting it into multiple files.
-
-Make it so the index page, view instance page etc. don't hard code the instance domain
-to localhost.
-
-Remove hard coded fetch and window location paths from JS.
 
 Add automated testing.
 
