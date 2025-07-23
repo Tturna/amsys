@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="d-flex justify-content-between">
-<h1>Provisioner Dashboard</h1>
+<h1>{{ AMSYS_TITLE }} Dashboard</h1>
 </div>
 <hr>
 
@@ -22,9 +22,13 @@
 
         <div class="mt-3">
             {% for preset in presets %}
-            <div class="d-block">
-            <p class="btn btn-sm btn-success m-auto">{{ preset.preset_name }}</p>
-            <button class="btn btn-sm btn-outline-danger" id="{{ preset.preset_name }}_remove_button" onclick="call_remove_preset({{ preset.pk }})">Remove</button>
+            <div class="row my-3">
+                <div class="col-4">
+                    <p class="btn btn-sm btn-success m-auto">{{ preset.preset_name }}</p>
+                </div>
+                <div class="col">
+                    <button class="btn btn-sm btn-outline-danger" id="{{ preset.preset_name }}_remove_button" onclick="call_remove_preset({{ preset.pk }})">Remove</button>
+                </div>
             </div>
             {% endfor %}
         </div>

@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 from django.shortcuts import render, reverse, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, HttpResponseForbidden, HttpResponseBadRequest, JsonResponse
 from django.core.files.uploadedfile import UploadedFile
@@ -72,7 +72,7 @@ def get_instance_statuses(instances=None):
             containers.append(c)
 
         if len(containers) == 0:
-            if inst.status != AppStatusEnum.REMOVED.value:
+            if inst.status != AppStatusEnum.STOPPED.value and inst.status != AppStatusEnum.REMOVED.value:
                 inst.status = AppStatusEnum.MISSING.value
                 instance_statuses.append({
                     "instance": inst,
@@ -82,11 +82,16 @@ def get_instance_statuses(instances=None):
                     "is_error": True
                 })
             else:
+                message = "Containers removed."
+
+                if inst.status == AppStatusEnum.REMOVED.value:
+                    message += " Data removed!"
+
                 instance_statuses.append({
                     "instance": inst,
                     "status": AppStatusEnum(inst.status).name,
                     "target_containers": [],
-                    "status_message": "Containers removed.",
+                    "status_message": message,
                     "is_error": True
                 })
             
@@ -99,7 +104,9 @@ def get_instance_statuses(instances=None):
             if c.status == "running":
                 running_containers.append(c.name)
             else:
-                inst.status = AppStatusEnum.STOPPED.value
+                if inst.status != AppStatusEnum.REMOVED.value:
+                    inst.status = AppStatusEnum.PAUSED.value
+
                 stopped_containers.append(c.name)
 
         if len(stopped_containers) == 0:
@@ -142,6 +149,8 @@ def get_instance_statuses(instances=None):
                 "status_message": "AMSYS error. This should never happen.",
                 "is_error": True
             })
+
+        inst.save()
 
     return instance_statuses
 
@@ -228,6 +237,36 @@ def view_location(request, location_name):
     return render(request, "view_location.html", context)
 
 @login_required
+@permission_required("main.change_locationmodel")
+def edit_location(request, location_name):
+    location = get_object_or_404(LocationModel, location_name=location_name)
+
+    if request.method == "GET":
+        form = forms.LocationForm(instance=location)
+
+        context = {
+            "location": location,
+            "form": form
+        }
+
+        return render(request, "edit_location.html", context)
+    elif request.method == "POST":
+        form = forms.LocationForm(request.POST, instance=location)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Instance saved")
+
+            return HttpResponseRedirect(reverse("view_location", kwargs={ "location_name": location.location_name }))
+        else:
+            context = {
+                "location": location,
+                "form": form
+            }
+
+            return render(request, "edit_location.html", context)
+
+@login_required
 @permission_required("main.add_organizationentitymodel")
 def create_organization(request):
     if request.method == "GET":
@@ -292,10 +331,14 @@ def remove_location(request, location_pk):
     return HttpResponse(status=204)
 
 class ImageBasedAppAdvancedSettings:
-    def __init__(self, env_vars = [], labels = [], volumes = []) -> None:
+    def __init__(self, env_vars = [], labels = [], volumes = [],
+                 env_dict = {}, labels_dict = {}, volumes_dict = {}) -> None:
         self.env_vars: List[Tuple[str, str]] = env_vars
         self.labels: List[Tuple[str, str]] = labels
         self.volumes: List[Tuple[str, str]] = volumes
+        self.env_dict: Dict = env_dict
+        self.labels_dict: Dict = labels_dict
+        self.volumes_dict: Dict = volumes_dict
 
     @classmethod
     def from_instance(cls, instance: AppInstanceModel) -> 'ImageBasedAppAdvancedSettings':
@@ -306,99 +349,149 @@ class ImageBasedAppAdvancedSettings:
         labels = [(key, labels_dict[key]) for key in labels_dict.keys()]
         volumes = [(key, volumes_dict[key]) for key in volumes_dict.keys()]
 
-        return cls(env_vars=env_vars, labels=labels, volumes=volumes)
+        return cls(env_vars=env_vars, labels=labels, volumes=volumes, env_dict=env_dict,
+                   labels_dict=labels_dict, volumes_dict=volumes_dict)
+
+    @classmethod
+    def get_base_env(cls, url_path: str, api_token: str, instance_pk: str) -> Dict:
+        return {
+            # TODO: Rename this env var to AMSYS_URL_PATH.
+            # This is what apps use to determine the path where they are hosted.
+            "AMSYS_APP_NAME": url_path,
+            "AMSYS_API_TOKEN": api_token,
+            "AMSYS_APP_ID": instance_pk
+        }
+
+    @classmethod
+    def get_base_labels(cls, app_name: str, url_path: str) -> Dict:
+        return {
+            "traefik.enable": "true",
+            f"traefik.http.routers.{app_name}-router.rule": f"PathPrefix(\"/{url_path}\")",
+            f"traefik.http.services.{app_name}-service.loadbalancer.server.port": "8000",
+            f"traefik.http.middlewares.{app_name}-strip.stripprefix.prefixes": f"/{url_path}",
+            f"traefik.http.routers.{app_name}-router.middlewares": f"{app_name}-strip@docker"
+        }
+
+    @classmethod
+    def get_base_volumes(cls) -> Dict:
+        amsys_path = get_amsys_path()
+
+        return {
+            f"{amsys_path}/ssh/instance_ca.pub": { "bind": "/etc/ssh/instance_ca.pub", "mode": "ro" }
+        }
 
     def set_env_vars(self, env_keys: List[str], env_vals: List[str]) -> None:
         self.env_vars = list(zip(env_keys, env_vals))
+        env_dict = {}
+
+        for key, value in self.env_vars:
+            env_dict[key] = value
+
+        self.env_dict = env_dict
 
     def set_labels(self, label_keys: List[str], label_vals: List[str]) -> None:
         self.labels = list(zip(label_keys, label_vals))
+        labels_dict = {}
+
+        for key, value in self.labels:
+            labels_dict[key] = value
+
+        self.labels_dict = labels_dict
 
     def set_volumes(self, volume_keys: List[str], volume_vals: List[str]) -> None:
         self.volumes = list(zip(volume_keys, volume_vals))
+        volumes_dict = {}
 
-def create_app_from_image(advanced_settings: ImageBasedAppAdvancedSettings, container_image: str, container_user: str, app_name: str, url_path: str, api_token: str, app_instance: AppInstanceModel, instance_path: str, template_files: List[TemplateFileModel], preset_name: str | None = None):
+        # for entry in self.volumes:
+        #     volumes_dict[f"{instance_path}/{entry[0]}"] = {
+        #         "bind": entry[1],
+        #         "mode": "rw"
+        #     }
+
+        for key, value in self.volumes:
+            volumes_dict[key] = value
+
+        self.volumes_dict = volumes_dict
+
+    def get_full_env_as_dict(self, url_path: str, api_token: str, instance_pk: str) -> Dict:
+        env = ImageBasedAppAdvancedSettings.get_base_env(url_path, api_token, instance_pk)
+        env.update(self.env_dict)
+        return env
+
+    def get_env_as_json_string(self) -> str:
+        return json.dumps(self.env_dict)
+
+    def get_full_env_as_json_string(self, url_path: str, api_token: str, instance_pk: str) -> str:
+        env = self.get_full_env_as_dict(url_path, api_token, instance_pk)
+        return json.dumps(env)
+
+    def get_full_labels_as_dict(self, app_name: str, url_path: str) -> Dict:
+        labels = ImageBasedAppAdvancedSettings.get_base_labels(app_name, url_path)
+        labels.update(self.labels_dict)
+        return labels
+
+    def get_labels_as_json_string(self):
+        return json.dumps(self.labels_dict)
+
+    def get_full_labels_as_json_string(self, app_name: str, url_path: str) -> str:
+        labels = self.get_full_labels_as_dict(app_name, url_path)
+        return json.dumps(labels)
+
+    def get_full_volumes_as_dict(self, instance_path: str) -> Dict:
+        volumes = ImageBasedAppAdvancedSettings.get_base_volumes()
+        full_volumes_dict = {}
+
+        for key in self.volumes_dict.keys():
+            full_volumes_dict[f"{instance_path}/{key}"] = {
+                "bind": self.volumes_dict[key],
+                "more": "rw"
+            }
+
+        volumes.update(full_volumes_dict)
+
+        return volumes
+
+    def get_volumes_as_json_string(self):
+        return json.dumps(self.volumes_dict)
+
+    def get_full_volumes_as_json_string(self, instance_path: str) -> str:
+        volumes = self.get_full_volumes_as_dict(instance_path)
+        return json.dumps(volumes)
+
+# TODO: Rename or actually set all the advanced settings
+def set_instance_advanced_settings(instance: AppInstanceModel, settings: ImageBasedAppAdvancedSettings) -> None:
+    env_json_string = settings.get_env_as_json_string()
+    labels_json_string = settings.get_labels_as_json_string()
+    volumes_json_string = settings.get_volumes_as_json_string()
+
+    instance.instance_environment_variables = env_json_string
+    instance.instance_labels = labels_json_string
+    instance.instance_volumes = volumes_json_string
+    instance.save()
+
+def create_app_from_image(advanced_settings: ImageBasedAppAdvancedSettings, container_image: str,
+                          container_user: str, app_instance: AppInstanceModel, instance_path: str,
+                          template_files: List[TemplateFileModel], preset_name: str | None = None):
     if container_user == "root" or container_user == "root:root":
         container_user = ""
 
     # preset_name = request.POST.get("preset_name", None)
-
-    env_entries = advanced_settings.env_vars
-    label_entries = advanced_settings.labels
-    volume_entries = advanced_settings.volumes
-
-    env = {
-        # TODO: Rename this env var to AMSYS_URL_PATH.
-        # This is what apps use to determine the path where they are hosted.
-        "AMSYS_APP_NAME": url_path,
-        "AMSYS_API_TOKEN": api_token,
-        "AMSYS_APP_ID": str(app_instance.pk)
-    }
-
-    env_json_string = "{"
-
-    for entry in env_entries:
-        env[entry[0]] = entry[1]
-        env_json_string += f"\"{entry[0]}\": \"{entry[1]}\","
-
-    # Replace last comma with closing curly brace
-    if env_json_string[-1:] == ",":
-        env_json_string = env_json_string[:-1]
-
-    env_json_string += "}"
-
-    labels = {
-        "traefik.enable": "true",
-        f"traefik.http.routers.{app_name}-router.rule": f"PathPrefix(\"/{url_path}\")",
-        f"traefik.http.services.{app_name}-service.loadbalancer.server.port": "8000",
-        f"traefik.http.middlewares.{app_name}-strip.stripprefix.prefixes": f"/{url_path}",
-        f"traefik.http.routers.{app_name}-router.middlewares": f"{app_name}-strip@docker"
-    }
-
-    labels_json_string = "{"
-
-    for entry in label_entries:
-        labels[entry[0]] = entry[1]
-        labels_json_string += f"\"{entry[0]}\": \"{entry[1]}\","
-
-    if labels_json_string[-1:] == ",":
-        labels_json_string = labels_json_string[:-1]
-
-    labels_json_string += "}"
-
-    amsys_path = get_amsys_path()
-
-    volumes = {
-        f"{amsys_path}/ssh/instance_ca.pub": { "bind": "/etc/ssh/instance_ca.pub", "mode": "ro" }
-    }
-
-    volumes_json_string = "{"
-
-    for entry in volume_entries:
-        volumes[f"{instance_path}/{entry[0]}"] = {
-            "bind": entry[1],
-            "mode": "rw"
-        }
-        volumes_json_string += f"\"{entry[0]}\": \"{entry[1]}\","
-
-    if volumes_json_string[-1:] == ",":
-        volumes_json_string = volumes_json_string[:-1]
-
-    volumes_json_string += "}"
-
-    app_instance.instance_environment_variables = env_json_string
-    app_instance.instance_labels = labels_json_string
-    app_instance.instance_volumes = volumes_json_string
-    app_instance.save()
-
+    set_instance_advanced_settings(app_instance, advanced_settings)
     docker_client = docker.from_env()
+
+    app_name = str(app_instance.app_name)
+    url_path = str(app_instance.url_path)
+    api_token = str(app_instance.api_token)
+    full_env = advanced_settings.get_full_env_as_dict(url_path, api_token, str(app_instance.pk))
+    full_labels = advanced_settings.get_full_labels_as_dict(app_name, url_path)
+    full_volumes = advanced_settings.get_full_volumes_as_dict(instance_path)
 
     try:
         docker_client.containers.run(
             image=container_image,
-            environment=env,
-            labels=labels,
-            volumes=volumes,
+            environment=full_env,
+            labels=full_labels,
+            volumes=full_volumes,
             detach=True,
             network="amsys-net",
             user=container_user,
@@ -418,15 +511,20 @@ def create_app_from_image(advanced_settings: ImageBasedAppAdvancedSettings, cont
 
         return False
 
+    dirs = app_instance.instance_directories
+    labels = advanced_settings.get_labels_as_json_string()
+    volumes = advanced_settings.get_volumes_as_json_string()
+    env = advanced_settings.get_env_as_json_string()
+
     if preset_name is not None:
         preset = AppPresetModel(
             preset_name=preset_name,
             container_image=container_image,
             container_user=container_user,
-            instance_directories=app_instance.instance_directories,
-            instance_labels=app_instance.instance_labels,
-            instance_volumes=app_instance.instance_volumes,
-            instance_environment_variables=app_instance.instance_environment_variables)
+            instance_directories=dirs,
+            instance_labels=labels,
+            instance_volumes=volumes,
+            instance_environment_variables=env)
 
         preset.save()
         preset.template_files.set(template_files)
@@ -596,7 +694,7 @@ def create_app_instance(request, using_compose=False):
 
         preset_name = request.POST.get("preset_name", None)
 
-        started_successfully = create_app_from_image(advanced_settings, container_image, container_user, app_name, url_path, api_token, app_instance, instance_path, template_files, preset_name)
+        started_successfully = create_app_from_image(advanced_settings, container_image, container_user, app_instance, instance_path, template_files, preset_name)
 
     if not started_successfully:
         messages.error(request, "App didn't start succesfully")
@@ -648,7 +746,7 @@ def remove_preset(request, preset_pk):
 
 @login_required
 @permission_required("main.change_appinstancemodel")
-def stop_instance(request, app_name, should_kill=False):
+def pause_instance(request, app_name, should_kill=False):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
     docker_client = docker.from_env()
 
@@ -665,7 +763,7 @@ def stop_instance(request, app_name, should_kill=False):
         stop_compose_result = run(command, cwd=instance_path, capture_output=True, text=True)
 
         if stop_compose_result.returncode != 0:
-            messages.error(request, f"App failed to stop. Error code {stop_compose_result.returncode}")
+            messages.error(request, f"App failed to pause. Error code {stop_compose_result.returncode}")
             print(stop_compose_result.stdout)
             print(stop_compose_result.stderr)
             return HttpResponseRedirect(reverse("index"))
@@ -677,6 +775,45 @@ def stop_instance(request, app_name, should_kill=False):
                 app_container.kill()
             else:
                 app_container.stop()
+        except docker.errors.NotFound:
+            messages.error(request, "App container not found! Some data may be lost.")
+            instance.status = AppStatusEnum.MISSING.value
+            instance.save()
+
+            return HttpResponse(status=204)
+        except docker.errors.APIError:
+            messages.error(request, "Container API error. Try again later.")
+            return HttpResponse(status=500)
+
+    instance.status = AppStatusEnum.PAUSED.value
+    instance.save()
+
+    return HttpResponse(status=204)
+
+@login_required
+@permission_required("main.change_appinstancemodel")
+def stop_instance(request, app_name):
+    instance = get_object_or_404(AppInstanceModel, app_name=app_name)
+    docker_client = docker.from_env()
+
+    instance_path = get_instance_path(app_name)
+
+    if (instance.using_compose):
+        command = None
+
+        command = ["docker", "compose", "-p", app_name, "stop"]
+        stop_compose_result = run(command, cwd=instance_path, capture_output=True, text=True)
+
+        if stop_compose_result.returncode != 0:
+            messages.error(request, f"App failed to stop. Error code {stop_compose_result.returncode}")
+            print(stop_compose_result.stdout)
+            print(stop_compose_result.stderr)
+            return HttpResponseRedirect(reverse("index"))
+    else:
+        try:
+            app_container = docker_client.containers.get(app_name)
+            app_container.stop()
+            app_container.remove(v=True, force=True)
         except docker.errors.NotFound:
             messages.error(request, "App container not found! Some data may be lost.")
             instance.status = AppStatusEnum.MISSING.value
@@ -732,14 +869,55 @@ def start_instance(request, app_name):
 def restart_instance(request, app_name):
     instance = get_object_or_404(AppInstanceModel, app_name=app_name)
     docker_client = docker.from_env()
+    instance_path = get_instance_path(app_name)
 
+    if (instance.using_compose):
+        run(["docker", "compose", "-p", app_name, "kill"], cwd=instance_path)
+        # We don't care about the result. If removal was successful, good. If there was
+        # nothing to remove, also good. In the case this throws some other error, the handling
+        # can be added then.
+    else:
+        try:
+            app_container = docker_client.containers.get(app_name)
+            app_container.remove(v=True, force=True)
+        except docker.errors.NotFound:
+            pass
+        except docker.errors.APIError:
+            messages.error(request, "Container API error. Try again later or contact an administrator.")
+            return HttpResponse(status=500)
+
+    if (instance.using_compose):
+        # TODO: implement
+        messages.error(request, "Restarting compose files is not implemented")
+        return HttpResponseRedirect(reverse("index"))
+    else:
+        advanced_settings = ImageBasedAppAdvancedSettings.from_instance(instance=instance)
+        started_successfully = create_app_from_image(advanced_settings, instance.container_image,
+                              instance.container_user, instance, instance_path, instance.template_files.all())
+
+    if not started_successfully:
+        messages.error(request, "App failed to restart!")
+        print("app restart failed")
+        instance.status = AppStatusEnum.ERROR.value
+        instance.save()
+
+        return HttpResponseRedirect(reverse("index"))
+
+    messages.success(request, "App restarted successfully")
+    return HttpResponseRedirect(reverse("index"))
+
+@login_required
+@permission_required("main.change_appinstancemodel")
+def recreate_instance(request, app_name):
+    instance = get_object_or_404(AppInstanceModel, app_name=app_name)
+    docker_client = docker.from_env()
     instance_path = get_instance_path(app_name)
 
     if (instance.using_compose):
         remove_compose_result = run(["docker", "compose", "-p", app_name, "kill"], cwd=instance_path, capture_output=True, text=True)
 
         if remove_compose_result.returncode != 0:
-            messages.error(request, f"Failed to restart instance. Error code {remove_compose_result.returncode}")
+            messages.error(request, f"Failed to recreate instance. Error code {remove_compose_result.returncode}")
             print(remove_compose_result.stdout)
             print(remove_compose_result.stderr)
             return HttpResponseRedirect(reverse("index"))
@@ -777,21 +955,19 @@ def restart_instance(request, app_name):
         compose_file = request.FILES["compose_file"]
         started_successfully = create_app_from_compose(compose_file, instance_path, instance.app_name)
     else:
-
         advanced_settings = ImageBasedAppAdvancedSettings.from_instance(instance=instance)
         started_successfully = create_app_from_image(advanced_settings, instance.container_image,
-                              instance.container_user, instance.app_name, instance.url_path,
-                              instance.api_token, instance, instance_path, instance.template_files.all())
+                              instance.container_user, instance, instance_path, instance.template_files.all())
 
     if not started_successfully:
-        messages.error(request, "App didn't restart succesfully")
-        print("app restart failed")
+        messages.error(request, "App recreation unsuccessful!")
+        print("app recreation failed")
         instance.status = AppStatusEnum.ERROR.value
         instance.save()
 
         return HttpResponseRedirect(reverse("index"))
 
-    messages.success(request, "App restarted successfully")
+    messages.success(request, "App recreated successfully")
     return HttpResponseRedirect(reverse("index"))
 
 @login_required
@@ -843,6 +1019,9 @@ def view_instance(request, app_name):
 
     return render(request, "view_instance.html", context)
 
+def normalize_empty_field_value(value):
+    return value if value not in ["", "{}", "[]"] else None
+
 @login_required
 @permission_required("main.change_appinstancemodel")
 def edit_instance(request, app_name):
@@ -852,7 +1031,13 @@ def edit_instance(request, app_name):
     form = None
 
     if request.method == "GET":
-        form = forms.AppInstanceForm(instance=instance, initial={ "transmit_destinations": defined_destinations })
+        form = forms.AppInstanceForm(instance=instance, initial={
+            "transmit_destinations": defined_destinations,
+            "template_files": instance.template_files.all(),
+            "container_image": instance.container_image,
+            "container_user": instance.container_user,
+            # "compose_file": instance.compose_file
+        })
 
         context = {
             "instance": instance,
@@ -863,8 +1048,72 @@ def edit_instance(request, app_name):
     elif request.method == "POST":
         form = forms.AppInstanceForm(request.POST, instance=instance)
 
-        if (form.is_valid()):
-            form.save()
+        dir_vals = request.POST.getlist("dir_entry[]")
+        env_keys = request.POST.getlist("env_entry_key[]")
+        env_vals = request.POST.getlist("env_entry_val[]")
+        label_keys = request.POST.getlist("label_entry_key[]")
+        label_vals = request.POST.getlist("label_entry_val[]")
+        volume_keys = request.POST.getlist("volume_entry_key[]")
+        volume_vals = request.POST.getlist("volume_entry_val[]")
+
+        dir_entries = list(dir_vals)
+        new_dirs = str(dir_entries).replace("'", "\"")
+
+        advanced_settings = ImageBasedAppAdvancedSettings()
+        advanced_settings.set_env_vars(env_keys, env_vals)
+        advanced_settings.set_labels(label_keys, label_vals)
+        advanced_settings.set_volumes(volume_keys, volume_vals)
+
+        new_env = advanced_settings.get_env_as_json_string()
+        new_labels = advanced_settings.get_labels_as_json_string()
+        new_volumes = advanced_settings.get_volumes_as_json_string()
+
+        form.full_clean()
+        instance = AppInstanceModel.objects.get(pk=instance.pk)
+        dynamic_field_errors = []
+
+        if instance.status != AppStatusEnum.STOPPED.value and instance.status != AppStatusEnum.REMOVED.value:
+            # if normalize_empty_field_value(instance.instance_directories) != normalize_empty_field_value(new_dirs):
+            if normalize_empty_field_value(new_dirs) is not None:
+                dynamic_field_errors.append("Can't edit directories when instance is not stopped.")
+
+            # if normalize_empty_field_value(instance.instance_environment_variables) != normalize_empty_field_value(new_env):
+            if normalize_empty_field_value(new_env) is not None:
+                dynamic_field_errors.append("Can't edit container environment variables when instance is not stopped.")
+
+            # if normalize_empty_field_value(instance.instance_labels) != normalize_empty_field_value(new_labels):
+            if normalize_empty_field_value(new_labels) is not None:
+                dynamic_field_errors.append("Can't edit container labels when instance is not stopped.")
+
+            # if normalize_empty_field_value(instance.instance_volumes) != normalize_empty_field_value(new_volumes):
+            if normalize_empty_field_value(new_volumes) is not None:
+                dynamic_field_errors.append("Can't edit container volumes when instance is not stopped.")
+
+        if (form.is_valid() and len(dynamic_field_errors) == 0):
+            instance.app_name = form.cleaned_data["app_name"]
+            instance.url_path = form.cleaned_data["url_path"]
+            instance.location = form.cleaned_data["location"]
+            
+            if "container_image" in form.cleaned_data.keys():
+                instance.container_image = form.cleaned_data["container_image"]
+
+            if "container_user" in form.cleaned_data.keys():
+                instance.container_user = form.cleaned_data["container_user"]
+
+            if "compose_file" in form.cleaned_data.keys():
+                instance.compose_file = form.cleaned_data["compose_file"]
+
+            template_files = list(form.cleaned_data["template_files"].all())
+            instance_path = get_instance_path(instance.app_name)
+
+            set_instance_advanced_settings(instance, advanced_settings)
+            instance.template_files.set(template_files)
+
+            instance.instance_directories = new_dirs
+            instance.save()
+
+            for template_file in template_files:
+                shutil.copy(template_file.filepath, f"{instance_path}/{template_file.filename}")
 
             transmit_destinations = form.cleaned_data["transmit_destinations"]
 
@@ -885,7 +1134,22 @@ def edit_instance(request, app_name):
             # Prevent double posting and stuff
             return HttpResponseRedirect(reverse("edit_instance", args=[instance.app_name]))
         else:
-            messages.error(request, "Invalid form")
+            # Use a new form because for some reason, the original form gets empty values
+            # for most of the fields.
+            form = forms.AppInstanceForm(instance=instance, initial={
+                "transmit_destinations": defined_destinations,
+                "template_files": instance.template_files.all(),
+                "container_image": instance.container_image,
+                "container_user": instance.container_user,
+                # "compose_file": instance.compose_file
+            })
+
+            # Add empty cleaned data because add_error() checks if the given field
+            # is in it.
+            form.cleaned_data = {}
+
+            for error_msg in dynamic_field_errors:
+                form.add_error(None, error_msg)
 
             context = {
                 "instance": instance,

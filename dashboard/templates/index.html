@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="d-flex justify-content-between">
-<h1>Provisioner Dashboard</h1>
+<h1>{{ AMSYS_TITLE }} Dashboard</h1>
 {% if is_proxy_running %}
 <h2><span class="badge bg-success mx-5">Proxy active</span></h2>
 {% else %}
@@ -55,11 +55,11 @@
                         <h4 class="card-title">{{ status_entry.instance.app_name }}
                             {% if status_entry.status == "RUNNING" %}
                             <span class="badge bg-success mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
+                            {% elif status_entry.status == "PAUSED" %}
+                            <span class="badge bg-warning mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
                             {% elif status_entry.status == "STOPPED" %}
                             <span class="badge bg-secondary mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
-                            {% elif status_entry.status == "MISSING" %}
-                            <span class="badge bg-warning mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
-                            {% elif status_entry.status == "ERROR" or status_entry.status == "REMOVED" %}
+                            {% else %}
                             <span class="badge bg-danger mx-3" id="{{ status_entry.instance.app_name }}_status">{{ status_entry.status }}</span>
                             {% endif %}
                         </h4>
@@ -75,12 +75,16 @@
 
                             {% if perms.main.change_appinstancemodel %}
                                 {% if status_entry.status == "RUNNING" %}
-                                <button class="btn btn-sm btn-outline-warning" id="{{ status_entry.instance.app_name }}_stop_button" onclick="call_stop_instance('{{ status_entry.instance.app_name }}')">Stop</button>
+                                <button class="btn btn-sm btn-outline-warning" id="{{ status_entry.instance.app_name }}_pause_button" onclick="call_pause_instance('{{ status_entry.instance.app_name }}')">Pause</button>
+                                <button class="btn btn-sm btn-outline-danger" id="{{ status_entry.instance.app_name }}_stop_button" onclick="call_stop_instance('{{ status_entry.instance.app_name }}')">Stop</button>
+                                {% elif status_entry.status == "PAUSED" %}
+                                <button class="btn btn-sm btn-outline-success" id="{{ status_entry.instance.app_name }}_start_button" onclick="call_start_instance('{{ status_entry.instance.app_name }}')">Resume</button>
+                                <button class="btn btn-sm btn-outline-danger" id="{{ status_entry.instance.app_name }}_stop_button" onclick="call_stop_instance('{{ status_entry.instance.app_name }}')">Stop</button>
                                 {% elif status_entry.status == "STOPPED" %}
-                                <button class="btn btn-sm btn-outline-success" id="{{ status_entry.instance.app_name }}_start_button" onclick="call_start_instance('{{ status_entry.instance.app_name }}')">Start</button>
+                                <button class="btn btn-sm btn-outline-success" id="{{ status_entry.instance.app_name }}_restart_button" onclick="call_restart_instance('{{ status_entry.instance.app_name }}')">Restart</button>
                                 <button class="btn btn-sm btn-outline-danger" id="{{ status_entry.instance.app_name }}_remove_button" onclick="call_remove_instance('{{ status_entry.instance.app_name }}')">Remove</button>
                                 {% elif status_entry.status == "REMOVED" %}
-                                <button class="btn btn-sm btn-outline-success" id="{{ status_entry.instance.app_name }}_restart_button" onclick="call_restart_instance('{{ status_entry.instance.app_name }}')">Restart</button>
+                                <button class="btn btn-sm btn-outline-success" id="{{ status_entry.instance.app_name }}_recreate_button" onclick="call_recreate_instance('{{ status_entry.instance.app_name }}')">Recreate</button>
                                 <button class="btn btn-sm btn-outline-secondary" id="{{ status_entry.instance.app_name }}_forget_button" onclick="call_forget_instance('{{ status_entry.instance.app_name }}')">Forget</button>
                                 {% else %}
                                 <button class="btn btn-sm btn-outline-danger" id="{{ status_entry.instance.app_name }}_remove_button" onclick="call_remove_instance('{{ status_entry.instance.app_name }}')">Remove</button>

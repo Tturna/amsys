@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
+{% load static %}
 
 {% block content %}
-    <h1>Provisioner Dashboard</h1>
+    <h1>{{ AMSYS_TITLE }} Dashboard</h1>
     <hr>
     <h2>Create new app instance</h2>
     <div class="row">
@@ -23,136 +24,5 @@
         </div>
     </div>
 
-    {% comment %}
-    TODO: This script has bloated. Put it in its own file(s).
-    {% endcomment %}
-    <script>
-        const advanced_div = document.getElementById("advanced");
-        document.getElementById("toggle_advanced").addEventListener("click", e => {
-            e.preventDefault();
-
-            if (advanced_div.classList.contains("d-none")) {
-                advanced_div.classList.remove("d-none");
-            } else {
-                advanced_div.classList.add("d-none");
-            }
-        });
-
-        // Preset auto-submit
-        const preset_form = document.getElementById("preset_form");
-        const preset_select = document.getElementById("id_preset");
-
-        if (preset_form && preset_select) {
-            preset_select.addEventListener("change", (e) => {
-                preset_form.submit();
-            });
-        }
-
-        // Handle dynamic input fields:
-        // Entry parents
-        let dir_entries_div = document.getElementById("dir-entries");
-        let label_entries_div = document.getElementById("label-entries");
-        let volume_entries_div = document.getElementById("volume-entries");
-        let env_entries_div = document.getElementById("env-entries");
-
-        // Template entries (disabled and hidden)
-        let dir_entry = dir_entries_div.querySelector(".entry")
-        let label_entry = label_entries_div.querySelector(".entry")
-        let volume_entry = volume_entries_div.querySelector(".entry")
-        let env_entry = env_entries_div.querySelector(".entry")
-
-        // Clone entry, enable it and show it
-        function add_entry(hidden_entry, value, key) {
-            const clone = hidden_entry.cloneNode(true);
-            clone.classList.remove("d-none")
-            clone.querySelectorAll("input").forEach(input => {
-                input.value = "";
-                input.disabled = false;
-            });
-            hidden_entry.parentNode.appendChild(clone);
-
-            if (!value && !key) return;
-
-            // Prepopulate
-            input_fields = clone.querySelectorAll("input");
-
-            if (key) {
-                input_fields[0].value = key;
-                input_fields[1].value = value;
-            } else {
-                input_fields[0].value = value;
-            }
-        }
-
-        function handle_add_entry_button(event) {
-            event.preventDefault();
-            const entry = event.target.closest("fieldset").querySelector(".entry");
-            add_entry(entry);
-        }
-
-        document.getElementById("dir-add").addEventListener("click", e => handle_add_entry_button(e));
-        document.getElementById("label-add").addEventListener("click", e => handle_add_entry_button(e));
-        document.getElementById("volume-add").addEventListener("click", e => handle_add_entry_button(e));
-        document.getElementById("env-add").addEventListener("click", e => handle_add_entry_button(e));
-
-        // Remove entry unless it's the last (last remaining is the hidden template one
-        // that shouldn't even have a remove button.
-        document.addEventListener("click", function (e) {
-            if (e.target && e.target.classList.contains("remove-entry")) {
-                e.preventDefault();
-                const entry = e.target.closest(".entry");
-
-                if (entry.parentNode.getElementsByClassName("entry").length > 1) {
-                    entry.remove();
-                }
-            }
-        });
-
-        // Populate dynamic fields from preset
-        const init_dirs_element = document.getElementById("id_instance_directories");
-        const init_labels_element = document.getElementById("id_instance_labels");
-        const init_volumes_element = document.getElementById("id_instance_volumes");
-        const init_env_element = document.getElementById("id_instance_environment_variables");
-
-        const hidden_dir_entry = dir_entries_div.querySelector(".entry");
-        const hidden_label_entry = label_entries_div.querySelector(".entry");
-        const hidden_volume_entry = volume_entries_div.querySelector(".entry");
-        const hidden_env_entry = env_entries_div.querySelector(".entry");
-
-        let init_dirs;
-        let init_labels;
-        let init_volumes;
-        let init_env;
-
-        if (init_dirs_element) {
-            init_dirs = JSON.parse(init_dirs_element.value);
-            init_dirs.forEach(dir => {
-                add_entry(hidden_dir_entry, dir);
-            });
-        }
-
-        if (init_labels_element) {
-            init_labels = JSON.parse(init_labels_element.value);
-
-            for (const [key, value] of Object.entries(init_labels)) {
-                add_entry(hidden_label_entry, value, key);
-            }
-        }
-
-        if (init_volumes_element) {
-            init_volumes = JSON.parse(init_volumes_element.value);
-
-            for (const [key, value] of Object.entries(init_volumes)) {
-                add_entry(hidden_volume_entry, value, key);
-            }
-        }
-
-        if (init_env_element) {
-            init_env = JSON.parse(init_env_element.value);
-
-            for (const [key, value] of Object.entries(init_env)) {
-                add_entry(hidden_env_entry, value, key);
-            }
-        }
-    </script>
+    <script src="{% static 'advanced_instance_settings.js' %}"></script>
 {% endblock %}

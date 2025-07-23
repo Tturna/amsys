@@ -13,6 +13,7 @@ class LocationModel(models.Model):
     location_name = models.CharField(max_length=100, verbose_name="Location name")
     owner_org = models.ForeignKey(OrganizationEntity, on_delete=models.CASCADE, verbose_name="Owner organization")
     code = models.CharField(max_length=20, blank=True)
+    status = models.CharField(max_length=50, blank=True)
     latitude = models.DecimalField(max_digits=20, decimal_places=16)
     longitude = models.DecimalField(max_digits=20, decimal_places=16)
     info = models.CharField(max_length=500, verbose_name="Additional information", blank=True)
@@ -32,10 +33,11 @@ class TemplateFileModel(models.Model):
 
 class AppStatusEnum(Enum):
     RUNNING = 1
-    STOPPED = 2
-    MISSING = 3
+    PAUSED  = 2
+    STOPPED = 3
     REMOVED = 4
-    ERROR   = 5
+    MISSING = 5
+    ERROR   = 6
 
     @classmethod
     def as_tuple_list(cls):

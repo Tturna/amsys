@@ -8,13 +8,9 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
-Either take container image field out of advanced settings in instance creation or
-make it a visible error when its value is missing.
+Separate out app listing so it can be easily used in many places.
 
 App name validation in instance creation form.
-
-Go through all used env vars and document them. Make it so no AMSYS vars include
-the ADDMAN name.
 
 Add instructions and validation for compose files.
 
@@ -24,6 +20,8 @@ Make it so the index page, view instance page etc. don't hard code the instance 
 to localhost.
 
 Remove hard coded fetch and window location paths from JS.
+
+Add automated testing.
 
 Make it so files created by compose based apps can be deleted by the master app.
 For image based apps, this is done by setting the container's UID to match the UID

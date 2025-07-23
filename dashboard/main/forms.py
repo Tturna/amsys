@@ -1,6 +1,6 @@
 from django import forms
 from django.conf import settings
-from .models import OrganizationEntity, AppInstanceModel, TemplateFileModel, AppPresetModel, LocationModel
+from .models import AppStatusEnum, OrganizationEntity, AppInstanceModel, TemplateFileModel, AppPresetModel, LocationModel
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Layout, Div, Submit
 from crispy_forms.bootstrap import StrictButton
@@ -18,6 +18,13 @@ class LocationForm(forms.ModelForm):
         widgets = {
             "info": forms.Textarea()
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        # Prevent crispy from rendering a form element for us. We define it in the template.
+        self.helper.form_tag = False
+
 
 def update_instance_template_file_selection():
     files = os.listdir(settings.INSTANCE_TEMPLATE_FILES_DIR)
@@ -45,7 +52,7 @@ class AppInstanceForm(forms.ModelForm):
             widget=forms.CheckboxSelectMultiple,
             required=False)
 
-    # This form has dynamic input fields defined in the instance creation template
+    # This form has dynamic input fields defined in the crispy forms layout below
 
     class Meta:
         model = AppInstanceModel
@@ -75,6 +82,7 @@ class AppInstanceForm(forms.ModelForm):
             "app_name",
             "url_path",
             "location",
+            "transmit_destinations",
             StrictButton("Advanced settings", css_id="toggle_advanced", css_class="btn btn-sm btn-secondary mb-5 d-block"),
             # TODO: Refactor with maybe more actual crispy forms layout objects and
             # possibly some function or template object for the repetitive bits.
@@ -183,53 +191,78 @@ class AppInstanceForm(forms.ModelForm):
                 css_id = "advanced",
                 css_class = "d-none"
             ),
-            Submit("submit", "Create")
         )
 
-        self.uneditable_fields = ["app_name", "url_path", "template_files"]
+        if self.using_compose:
+            self.fields["compose_file"] = forms.FileField(label="Docker compose YAML file", widget=forms.FileInput(attrs={"accept": ".yaml, .yml"}))
+            self.helper.layout[-1].insert(0, "compose_file")
+        else:
+            self.fields["container_image"] = \
+                    forms.CharField(label="Docker container image name", max_length=50,
+                                    strip=True, help_text="e.g. addman, nginx:1.27, debian:bookworm")
+            self.fields["container_user"] = \
+                    forms.CharField(label="Container user", max_length=20, strip=True,
+                                    required=False,
+                                    help_text="The user must exist in the container. \"root\" or an empty user will run the container as the root user.",
+                                    widget=forms.TextInput(attrs={"placeholder": "username"}))
+
+            self.helper.layout[-1].insert(0, "container_user")
+            self.helper.layout.insert(3, "container_image")
+
+        self.uneditable_fields = [
+            "app_name", "url_path", "template_files", "container_image", "container_user",
+            "compose_file", "instance_directories", "instance_labels", "instance_volumes",
+            "instance_environment_variables"
+        ]
 
         # If form is created from an existing model (editing form)
         if self.instance and self.instance.pk:
             self.fields["transmit_destinations"].queryset = AppInstanceModel.objects.exclude(app_name=self.instance.app_name)
 
-            for field in self.uneditable_fields:
-                self.fields[field].widget.attrs["disabled"] = True
-                # Make uneditable fields get past validation
-                # as their POST values will be empty at that point
-                self.fields[field].required = False
-        else:
-            # Don't show compose file or container image fields when editing. They can't be changed anyway.
-            if self.using_compose:
-                self.fields["compose_file"] = forms.FileField(label="Docker compose YAML file", widget=forms.FileInput(attrs={"accept": ".yaml, .yml"}))
-                self.helper.layout[-2].insert(0, "compose_file")
-            else:
-                self.fields["container_image"] = \
-                        forms.CharField(label="Docker container image name", max_length=50,
-                                        strip=True, help_text="e.g. addman, nginx:1.27, debian:bookworm")
-                self.fields["container_user"] = \
-                        forms.CharField(label="Container user", max_length=20, strip=True,
-                                        required=False,
-                                        help_text="The user must exist in the container. \"root\" or an empty user will run the container as the root user.",
-                                        widget=forms.TextInput(attrs={"placeholder": "username"}))
+            # Prevent editing certain fields unless container is removed
+            if self.instance.status != AppStatusEnum.STOPPED.value and self.instance.status != AppStatusEnum.REMOVED.value:
+                self.helper.layout.insert(0, HTML("<p class=\"alert alert-warning\">App needs to be stopped to be edited completely. Some values can still be changed.</p>"))
 
-                self.helper.layout[-2].insert(0, "container_user")
-                self.helper.layout[-2].insert(0, "container_image")
+                # Remove the last 2 layout elements from the form (advanced settings and its toggle button)
+                self.helper.layout.pop()
+                self.helper.layout.pop()
+
+                for field in self.uneditable_fields:
+                    if field not in self.fields.keys():
+                        continue
+
+                    self.fields[field].widget.attrs["disabled"] = True
+                    # Make uneditable fields get past validation
+                    # as their POST values will be empty at that point
+                    self.fields[field].required = False
+
+            # Add submit button because for some reason adding it in the template makes
+            # it drop outside of the form. This is probably due to crispy forms.
+            self.helper.layout.append(Submit('submit', 'Save', css_class='btn btn-primary'))
+        else:
+            self.helper.layout.append(Submit('submit', 'Create', css_class='btn btn-primary'))
 
     def clean(self):
         cleaned_data = super().clean()
 
         # If form is created from an existing model (editing form)
         if self.instance and self.instance.pk:
-            for field in self.uneditable_fields:
-                old_value = getattr(self.instance, field)
-                new_value = self.data.get(field)
+            # Prevent editing certain fields unless container is removed
+            if self.instance.status != AppStatusEnum.STOPPED.value and self.instance.status != AppStatusEnum.REMOVED.value:
 
-                if new_value is not None and old_value != new_value:
-                    self.add_error(field, f"Can't edit field '{field}'")
-                else:
-                    # Get uneditable field values from the existing
-                    # instance instead of POST values
-                    cleaned_data[field] = old_value
+                for field in self.uneditable_fields:
+                    if not hasattr(self.instance, field):
+                        continue
+
+                    old_value = getattr(self.instance, field)
+                    new_value = self.data.get(field)
+
+                    if new_value is not None and old_value != new_value:
+                        self.add_error(field, f"Can't edit field '{field}'")
+                    else:
+                        # Get uneditable field values from the existing
+                        # instance instead of POST values
+                        cleaned_data[field] = old_value
 
         return cleaned_data
 

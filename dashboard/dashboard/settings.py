@@ -18,6 +18,7 @@ env_path = Path(__file__).resolve().parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
 AMSYS_TRAEFIK_URL = getenv("AMSYS_TRAEFIK_URL", "http://localhost:8080/")
+AMSYS_TITLE = getenv("AMSYS_TITLE", "Provisioner")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
