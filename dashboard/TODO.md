@@ -8,6 +8,8 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
+App status on map
+
 Separate out app listing so it can be easily used in many places.
 
 App name validation in instance creation form.
