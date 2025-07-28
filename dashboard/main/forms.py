@@ -45,12 +45,14 @@ class AppInstanceForm(forms.ModelForm):
     transmit_destinations = forms.ModelMultipleChoiceField(
             queryset=AppInstanceModel.objects.all(),
             widget=forms.CheckboxSelectMultiple,
-            required=False)
+            required=False,
+            help_text="Which applications can this application connect to? (e.g. for file sharing)")
 
     template_files = forms.ModelMultipleChoiceField(
             queryset=TemplateFileModel.objects.all(),
             widget=forms.CheckboxSelectMultiple,
-            required=False)
+            required=False,
+            help_text="Pre-made files to copy into the application's own directory. Usually done so they can be mounted into the application container below.")
 
     # This form has dynamic input fields defined in the crispy forms layout below
 
@@ -95,6 +97,9 @@ class AppInstanceForm(forms.ModelForm):
                 HTML("""
                      <fieldset id="dir-entries" class="my-5">
                         <legend class="form-label">Instance directories</legend>
+                        <div class="form-text">
+                            Optionally add directories into the application instance's directory on the host machine. This doesn't affect the application container. This can be used to organize container mounts on the host machine side.
+                        </div>
                         <div class="row justify-content-between">
                             <label class="form-label col-4">Directory path (relative)</label>
                             <div class="col-4">
@@ -116,6 +121,9 @@ class AppInstanceForm(forms.ModelForm):
                 HTML("""
                     <fieldset id="label-entries" class="my-5">
                         <legend class="form-label">Container labels</legend>
+                        <div class="form-text">
+                            Optionally add labels to the created container. These may affect the container or its dynamic routing.
+                        </div>
                         <div class="row">
                             <label class="form-label col-4">Label</label>
                             <label class="form-label col-4">Value</label>
@@ -141,6 +149,9 @@ class AppInstanceForm(forms.ModelForm):
                 HTML("""
                     <fieldset id="volume-entries" class="my-5">
                         <legend class="form-label">Container volumes</legend>
+                        <div class="form-text">
+                            Optionally add mounts to the container. This can be used to mount data between the host machine and the container so that data persists across container restarts or failures. Recommended for most applications.
+                        </div>
                         <div class="row">
                             <label class="form-label col-4">Source (relative)</label>
                             <label class="form-label col-4">Destination (absolute)</label>
@@ -166,6 +177,9 @@ class AppInstanceForm(forms.ModelForm):
                 HTML("""
                     <fieldset id="env-entries" class="my-5">
                         <legend class="form-label">Container environment variables</legend>
+                        <div class="form-text">
+                            Optionally add environment variables to the container. These usually affect the application running inside the container. E.g. you can set "ADDMAN_TITLE" to "ADDMAN FDF OEM X".
+                        </div>
                         <div class="row">
                             <label class="form-label col-4">Key</label>
                             <label class="form-label col-4">Value</label>
@@ -267,7 +281,7 @@ class AppInstanceForm(forms.ModelForm):
         return cleaned_data
 
 class AppPresetForm(forms.Form):
-    preset = forms.ModelChoiceField(queryset=AppPresetModel.objects.all(), empty_label="No preset", required=False)
+    preset = forms.ModelChoiceField(queryset=AppPresetModel.objects.all(), empty_label="No preset", required=False, help_text="Choose or create a new preset")
 
     # The "preset" field should have the preset objects as available choices as well as
     # an always available default choice, "New preset", which is not an object. Choosing this

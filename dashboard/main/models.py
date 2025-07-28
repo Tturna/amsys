@@ -44,9 +44,9 @@ class AppStatusEnum(Enum):
         return [(x.name, x.value) for x in list(cls)]
 
 class AppInstanceModel(models.Model):
-    app_name = models.CharField(max_length=20, verbose_name="App name")
-    url_path = models.CharField(max_length=20, verbose_name="URL path", blank=True, help_text="Leave empty to match app name")
-    location = models.ForeignKey(LocationModel, on_delete=models.CASCADE)
+    app_name = models.CharField(max_length=20, verbose_name="App name", help_text="Allowed characters: A-Z, -, _. Don't use spaces or slashes.")
+    url_path = models.CharField(max_length=20, verbose_name="URL path", blank=True, help_text="Leave empty to match app name. Allowed characters: A-Z, -, _.")
+    location = models.ForeignKey(LocationModel, on_delete=models.CASCADE, help_text="Attach this application to a location")
     template_files = models.ManyToManyField(TemplateFileModel)
     status = models.IntegerField(choices=AppStatusEnum.as_tuple_list())
     created_at = models.DateTimeField()
