@@ -10,6 +10,14 @@ Generalize app instance creation to support other kinds of apps.
 
 App status on map
 
+Free text field to instances where you can specify the server on which the app is running for example.
+
+File transfer logging somehow?
+
+Show the owner organization of locations when creating an instance
+
+API connection lines should be different based on connected app/location status.
+
 Separate out app listing so it can be easily used in many places.
 - Show app location and connected organization in the listed cards.
 - Fix "created at" (timezone).
