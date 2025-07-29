@@ -27,8 +27,6 @@ to localhost.
 
 Remove hard coded fetch and window location paths from JS.
 
-App name validation in instance creation form.
-
 Add instructions and validation for compose files.
 
 Consider refactoring views.py and splitting it into multiple files.
