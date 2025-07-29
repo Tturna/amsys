@@ -359,7 +359,10 @@ class ImageBasedAppAdvancedSettings:
             # This is what apps use to determine the path where they are hosted.
             "AMSYS_APP_NAME": url_path,
             "AMSYS_API_TOKEN": api_token,
-            "AMSYS_APP_ID": instance_pk
+            "AMSYS_APP_ID": instance_pk,
+            # TODO: It would probably make sense to make the port an env var
+            "AMSYS_API_BASE_URL": "http://host.docker.internal:8000/api",
+            "AMSYS_SSH_INSTANCE_KEY": "~/.ssh/instance_key.pub"
         }
 
     @classmethod
