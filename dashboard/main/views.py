@@ -1181,7 +1181,8 @@ def map(request):
 
     for inst in instances:
         location_dict = model_to_dict(inst.location)
-        inst_dict = model_to_dict(inst, fields=["app_name", "url_path"])
+        inst_dict = model_to_dict(inst, fields=["app_name", "url_path", "status"])
+        inst_dict["status"] = str(AppStatusEnum(inst_dict["status"]).name)
 
         for entry in location_entries:
             if location_dict["id"] == entry["id"]:

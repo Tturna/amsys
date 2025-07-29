@@ -21,7 +21,8 @@ locations.forEach(location => {
 
     if (apps.length > 0) {
         apps_string = "<strong>Apps:</strong><br>" + apps
-            .map(app => `<a href=/view_instance/${app["app_name"]}>${app["app_name"]}</a>`)
+            .map(app => `<a href=/view_instance/${app["app_name"]}>${app["app_name"]}</a> 
+                - <span class="badge bg-secondary">${app["status"]}</span>`)
             .join("<br>")
     } else {
         apps_string = "No apps in this location."
