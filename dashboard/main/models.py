@@ -53,7 +53,7 @@ class AppInstanceModel(models.Model):
     template_files = models.ManyToManyField(TemplateFileModel)
     status = models.IntegerField(choices=AppStatusEnum.as_tuple_list())
     created_at = models.DateTimeField()
-    api_token = models.CharField(max_length=20)
+    api_token = models.CharField(max_length=50)
     using_compose = models.BooleanField()
     container_image = models.CharField(max_length=50, blank=True)
     container_user = models.CharField(max_length=50, blank=True)
