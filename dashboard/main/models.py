@@ -62,6 +62,7 @@ class AppInstanceModel(models.Model):
     instance_labels = models.CharField(max_length=1024, blank=True)
     instance_volumes = models.CharField(max_length=1024, blank=True)
     instance_environment_variables = models.CharField(max_length=1024, blank=True)
+    info = models.CharField(max_length=512, blank=True)
 
     def __str__(self):
         return str(self.app_name)

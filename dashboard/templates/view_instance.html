@@ -32,6 +32,17 @@
         TODO: Add instance status stuff here once instance cards are separated out of templates.
         {% endcomment %}
 
+        {% if instance.info %}
+        <p>Additional information:</p>
+        <div class="card mb-3">
+            <div class="card-body">
+                {{ instance.info }}
+            </div>
+        </div>
+        {% else %}
+        <p>No additional information</p>
+        {% endif %}
+
         {% if destinations %}
         <h3>Can send files to:</h3>
         {% for dest_connection in destinations %}

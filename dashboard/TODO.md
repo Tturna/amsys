@@ -8,8 +8,6 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
-Free text field to instances where you can specify the server on which the app is running for example.
-
 File transfer logging somehow?
 
 Show the owner organization of locations when creating an instance

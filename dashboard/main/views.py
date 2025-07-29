@@ -1096,6 +1096,7 @@ def edit_instance(request, app_name):
             instance.app_name = form.cleaned_data["app_name"]
             instance.url_path = form.cleaned_data["url_path"]
             instance.location = form.cleaned_data["location"]
+            instance.info = form.cleaned_data["info"]
             
             if "container_image" in form.cleaned_data.keys():
                 instance.container_image = form.cleaned_data["container_image"]

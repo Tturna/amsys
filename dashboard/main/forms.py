@@ -58,9 +58,10 @@ class AppInstanceForm(forms.ModelForm):
 
     class Meta:
         model = AppInstanceModel
-        fields = ["app_name", "url_path", "location", "instance_directories",
+        fields = ["app_name", "url_path", "location", "info", "instance_directories",
                   "instance_labels", "instance_volumes", "instance_environment_variables"]
         widgets = {
+            "info": forms.Textarea(),
             "instance_directories": forms.HiddenInput(),
             "instance_labels": forms.HiddenInput(),
             "instance_volumes": forms.HiddenInput(),
@@ -85,6 +86,7 @@ class AppInstanceForm(forms.ModelForm):
             "url_path",
             "location",
             "transmit_destinations",
+            "info",
             StrictButton("Advanced settings", css_id="toggle_advanced", css_class="btn btn-sm btn-secondary mb-5 d-block"),
             # TODO: Refactor with maybe more actual crispy forms layout objects and
             # possibly some function or template object for the repetitive bits.
