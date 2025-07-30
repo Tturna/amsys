@@ -10,8 +10,6 @@ Generalize app instance creation to support other kinds of apps.
 
 File transfer logging somehow?
 
-Show the owner organization of locations when creating an instance
-
 API connection lines should be different based on connected app/location status.
 
 Separate out app listing so it can be easily used in many places.

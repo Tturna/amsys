@@ -586,6 +586,21 @@ def create_app_instance(request, using_compose=False):
         if form is None:
             form = forms.AppInstanceForm(using_compose=using_compose)
 
+        # Add owner organization name to the end of location choices
+        location_choices = list(form.fields["location"].choices)
+        new_choices = []
+
+        for val, name in location_choices:
+            if not hasattr(val, "instance") or not isinstance(val.instance, LocationModel):
+                new_choices.append((val, name))
+                continue
+
+            owner_org = str(val.instance.owner_org)
+            new_name = f"{name} ({owner_org})"
+            new_choices.append((val, new_name))
+
+        form.fields["location"].choices = new_choices
+
         context = {
             "form": form,
             "preset_form": preset_form
@@ -1041,6 +1056,21 @@ def edit_instance(request, app_name):
             "container_user": instance.container_user,
             # "compose_file": instance.compose_file
         })
+
+        # Add owner organization name to the end of location choices
+        location_choices = list(form.fields["location"].choices)
+        new_choices = []
+
+        for val, name in location_choices:
+            if not hasattr(val, "instance") or not isinstance(val.instance, LocationModel):
+                new_choices.append((val, name))
+                continue
+
+            owner_org = str(val.instance.owner_org)
+            new_name = f"{name} ({owner_org})"
+            new_choices.append((val, new_name))
+
+        form.fields["location"].choices = new_choices
 
         context = {
             "instance": instance,
