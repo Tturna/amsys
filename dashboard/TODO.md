@@ -8,9 +8,6 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
-Fix admin page so advanced settings can be changed without having to mess with
-instance status or other parameters. Status can't be changed anyway because of a bug.
-
 In some cases when an instance is stopped (not killed?), it loses advanced settings.
 This seems to also make it so if the app is started again (even with replaced advanced settings?),
 it creates instance directories and stuff as root, making it impossible to remove instance data.

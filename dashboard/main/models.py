@@ -42,7 +42,7 @@ class AppStatusEnum(Enum):
 
     @classmethod
     def as_tuple_list(cls):
-        return [(x.name, x.value) for x in list(cls)]
+        return [(x.value, x.name) for x in list(cls)]
 
 class AppInstanceModel(models.Model):
     app_name = models.CharField(max_length=20, verbose_name="App name", help_text="Allowed characters: A-Z, -, _. Don't use spaces or numbers. Must be at least 3 characters long.",
@@ -50,19 +50,19 @@ class AppInstanceModel(models.Model):
     url_path = models.CharField(max_length=20, verbose_name="URL path", blank=True, help_text="Leave empty to match app name. Allowed characters: A-Z, -, _. Must be at least 3 characters long.",
                                 validators=[RegexValidator(regex="^[a-zA-Z_-]{3,}$")])
     location = models.ForeignKey(LocationModel, on_delete=models.CASCADE, help_text="Attach this application to a location")
-    template_files = models.ManyToManyField(TemplateFileModel)
+    template_files = models.ManyToManyField(TemplateFileModel, blank=True)
     status = models.IntegerField(choices=AppStatusEnum.as_tuple_list())
     created_at = models.DateTimeField()
     api_token = models.CharField(max_length=50)
     using_compose = models.BooleanField()
     container_image = models.CharField(max_length=50, blank=True)
     container_user = models.CharField(max_length=50, blank=True)
+    info = models.CharField(max_length=512, blank=True)
     # These should contain JSON formatted data:
     instance_directories = models.CharField(max_length=1024, blank=True)
     instance_labels = models.CharField(max_length=1024, blank=True)
     instance_volumes = models.CharField(max_length=1024, blank=True)
     instance_environment_variables = models.CharField(max_length=1024, blank=True)
-    info = models.CharField(max_length=512, blank=True)
 
     def __str__(self):
         return str(self.app_name)
