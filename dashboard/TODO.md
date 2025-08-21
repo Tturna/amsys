@@ -13,6 +13,8 @@ This seems to also make it so if the app is started again (even with replaced ad
 it creates instance directories and stuff as root, making it impossible to remove instance data.
 I think this also makes file transfer impossible between some applications.
 
+Make sure the system doesn't crash if there is no SSH certificate keys.
+
 Prevent adding an instance with a URL path that is already in use.
 
 API connection lines should be different based on connected app/location status.
