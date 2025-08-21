@@ -16,14 +16,28 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 
 default_config_file_path = BASE_DIR / 'site-config.json'
 config_path = os.getenv("ADDMAN_SITE_CONFIG_PATH", default_config_file_path)
+db_id = "defaultid"
+uid_counter = 1000
 
-with open(config_path, "r") as file:
-    data = json.load(file)
+try:
+    with open(config_path, "r") as file:
+        data = json.load(file)
 
-    if ("sftp_destinations" in data):
-        for dest in data["sftp_destinations"]:
-            index = len(DEFAULT_FILE_TRANSFER_DESTINATIONS)
-            DEFAULT_FILE_TRANSFER_DESTINATIONS.update({ index: dest["name"] })
+        if ("sftp_destinations" in data):
+            for dest in data["sftp_destinations"]:
+                index = len(DEFAULT_FILE_TRANSFER_DESTINATIONS)
+                DEFAULT_FILE_TRANSFER_DESTINATIONS.update({ index: dest["name"] })
+
+        if ("db_id" in data):
+            db_id = data["db_id"]
+
+        if ("uid_counter" in data):
+            uid_counter = int(data["uid_counter"])
+except FileNotFoundError:
+    pass
+
+DB_ID = os.getenv("ADDMAN_DB_ID", db_id)
+UID_COUNTER = uid_counter
 
 app_name = os.getenv('AMSYS_APP_NAME', '')
 app_name = app_name.replace('/', '')
