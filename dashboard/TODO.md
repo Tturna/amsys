@@ -10,6 +10,8 @@ Generalize app instance creation to support other kinds of apps.
 
 File transfer logging somehow?
 
+Prevent adding an instance with a URL path that is already in use.
+
 API connection lines should be different based on connected app/location status.
 
 Separate out app listing so it can be easily used in many places.
