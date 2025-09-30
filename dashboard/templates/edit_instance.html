@@ -14,5 +14,12 @@
         </div>
     </div>
 
+    <script>
+        {% if status == "STOPPED" or status == "REMOVED" %}
+            const instance_stopped = true;
+        {% else %}
+            const instance_stopped = false;
+        {% endif %}
+    </script>
     <script src="{% static 'advanced_instance_settings.js' %}"></script>
 {% endblock %}

@@ -1074,55 +1074,36 @@ def edit_instance(request, app_name):
 
         context = {
             "instance": instance,
-            "form": form
+            "form": form,
+            "status": AppStatusEnum(instance.status).name
         }
 
         return render(request, "edit_instance.html", context)
     elif request.method == "POST":
         form = forms.AppInstanceForm(request.POST, instance=instance)
-
-        dir_vals = request.POST.getlist("dir_entry[]")
-        env_keys = request.POST.getlist("env_entry_key[]")
-        env_vals = request.POST.getlist("env_entry_val[]")
-        label_keys = request.POST.getlist("label_entry_key[]")
-        label_vals = request.POST.getlist("label_entry_val[]")
-        volume_keys = request.POST.getlist("volume_entry_key[]")
-        volume_vals = request.POST.getlist("volume_entry_val[]")
-
-        dir_entries = list(dir_vals)
-        new_dirs = str(dir_entries).replace("'", "\"")
-
         advanced_settings = ImageBasedAppAdvancedSettings()
-        advanced_settings.set_env_vars(env_keys, env_vals)
-        advanced_settings.set_labels(label_keys, label_vals)
-        advanced_settings.set_volumes(volume_keys, volume_vals)
+        new_dirs = None
 
-        new_env = advanced_settings.get_env_as_json_string()
-        new_labels = advanced_settings.get_labels_as_json_string()
-        new_volumes = advanced_settings.get_volumes_as_json_string()
+        if (instance.status == AppStatusEnum.STOPPED.value or instance.status == AppStatusEnum.REMOVED.value):
+            dir_vals = request.POST.getlist("dir_entry[]")
+            env_keys = request.POST.getlist("env_entry_key[]")
+            env_vals = request.POST.getlist("env_entry_val[]")
+            label_keys = request.POST.getlist("label_entry_key[]")
+            label_vals = request.POST.getlist("label_entry_val[]")
+            volume_keys = request.POST.getlist("volume_entry_key[]")
+            volume_vals = request.POST.getlist("volume_entry_val[]")
+
+            dir_entries = list(dir_vals)
+            new_dirs = str(dir_entries).replace("'", "\"")
+
+            advanced_settings.set_env_vars(env_keys, env_vals)
+            advanced_settings.set_labels(label_keys, label_vals)
+            advanced_settings.set_volumes(volume_keys, volume_vals)
 
         form.full_clean()
         instance = AppInstanceModel.objects.get(pk=instance.pk)
-        dynamic_field_errors = []
 
-        if instance.status != AppStatusEnum.STOPPED.value and instance.status != AppStatusEnum.REMOVED.value:
-            # if normalize_empty_field_value(instance.instance_directories) != normalize_empty_field_value(new_dirs):
-            if normalize_empty_field_value(new_dirs) is not None:
-                dynamic_field_errors.append("Can't edit directories when instance is not stopped.")
-
-            # if normalize_empty_field_value(instance.instance_environment_variables) != normalize_empty_field_value(new_env):
-            if normalize_empty_field_value(new_env) is not None:
-                dynamic_field_errors.append("Can't edit container environment variables when instance is not stopped.")
-
-            # if normalize_empty_field_value(instance.instance_labels) != normalize_empty_field_value(new_labels):
-            if normalize_empty_field_value(new_labels) is not None:
-                dynamic_field_errors.append("Can't edit container labels when instance is not stopped.")
-
-            # if normalize_empty_field_value(instance.instance_volumes) != normalize_empty_field_value(new_volumes):
-            if normalize_empty_field_value(new_volumes) is not None:
-                dynamic_field_errors.append("Can't edit container volumes when instance is not stopped.")
-
-        if (form.is_valid() and len(dynamic_field_errors) == 0):
+        if (form.is_valid()):
             instance.app_name = form.cleaned_data["app_name"]
             instance.url_path = form.cleaned_data["url_path"]
             instance.location = form.cleaned_data["location"]
@@ -1140,10 +1121,11 @@ def edit_instance(request, app_name):
             template_files = list(form.cleaned_data["template_files"].all())
             instance_path = get_instance_path(instance.app_name)
 
-            set_instance_advanced_settings(instance, advanced_settings)
-            instance.template_files.set(template_files)
+            if (instance.status == AppStatusEnum.STOPPED.value or instance.status == AppStatusEnum.REMOVED.value):
+                set_instance_advanced_settings(instance, advanced_settings)
+                instance.instance_directories = new_dirs
 
-            instance.instance_directories = new_dirs
+            instance.template_files.set(template_files)
             instance.save()
 
             for template_file in template_files:
@@ -1181,9 +1163,6 @@ def edit_instance(request, app_name):
             # Add empty cleaned data because add_error() checks if the given field
             # is in it.
             form.cleaned_data = {}
-
-            for error_msg in dynamic_field_errors:
-                form.add_error(None, error_msg)
 
             context = {
                 "instance": instance,

@@ -239,10 +239,6 @@ class AppInstanceForm(forms.ModelForm):
             if self.instance.status != AppStatusEnum.STOPPED.value and self.instance.status != AppStatusEnum.REMOVED.value:
                 self.helper.layout.insert(0, HTML("<p class=\"alert alert-warning\">App needs to be stopped to be edited completely. Some values can still be changed.</p>"))
 
-                # Remove the last 2 layout elements from the form (advanced settings and its toggle button)
-                self.helper.layout.pop()
-                self.helper.layout.pop()
-
                 for field in self.uneditable_fields:
                     if field not in self.fields.keys():
                         continue
@@ -254,9 +250,9 @@ class AppInstanceForm(forms.ModelForm):
 
             # Add submit button because for some reason adding it in the template makes
             # it drop outside of the form. This is probably due to crispy forms.
-            self.helper.layout.append(Submit('submit', 'Save', css_class='btn btn-primary'))
+            self.helper.layout.append(Submit('submit', 'Save', css_class='btn btn-primary', css_id='instance_submit'))
         else:
-            self.helper.layout.append(Submit('submit', 'Create', css_class='btn btn-primary'))
+            self.helper.layout.append(Submit('submit', 'Create', css_class='btn btn-primary', css_id='instance_submit'))
 
     def clean(self):
         cleaned_data = super().clean()

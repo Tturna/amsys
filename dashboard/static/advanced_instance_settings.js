@@ -38,7 +38,8 @@ function add_entry(hidden_entry, value, key) {
     clone.classList.remove("d-none")
     clone.querySelectorAll("input").forEach(input => {
         input.value = "";
-        input.disabled = false;
+        // instance_stopped is defined in edit_instance.html
+        input.disabled = !instance_stopped;
     });
     hidden_entry.parentNode.appendChild(clone);
 
@@ -61,15 +62,32 @@ function handle_add_entry_button(event) {
     add_entry(entry);
 }
 
-document.getElementById("dir-add").addEventListener("click", e => handle_add_entry_button(e));
-document.getElementById("label-add").addEventListener("click", e => handle_add_entry_button(e));
-document.getElementById("volume-add").addEventListener("click", e => handle_add_entry_button(e));
-document.getElementById("env-add").addEventListener("click", e => handle_add_entry_button(e));
+const dir_add_btn = document.getElementById("dir-add");
+const lbl_add_btn = document.getElementById("label-add");
+const vol_add_btn = document.getElementById("volume-add");
+const env_add_btn = document.getElementById("env-add");
+
+if (instance_stopped) {
+    dir_add_btn.addEventListener("click", e => handle_add_entry_button(e));
+    lbl_add_btn.addEventListener("click", e => handle_add_entry_button(e));
+    vol_add_btn.addEventListener("click", e => handle_add_entry_button(e));
+    env_add_btn.addEventListener("click", e => handle_add_entry_button(e));
+} else {
+    dir_add_btn.disabled = true;
+    lbl_add_btn.disabled = true;
+    vol_add_btn.disabled = true;
+    env_add_btn.disabled = true;
+    remove_buttons = document.getElementsByClassName("remove-entry");
+
+    for (let btn of remove_buttons) {
+        btn.disabled = true;
+    }
+}
 
 // Remove entry unless it's the last (last remaining is the hidden template one
 // that shouldn't even have a remove button.
 document.addEventListener("click", function (e) {
-    if (e.target && e.target.classList.contains("remove-entry")) {
+    if (instance_stopped && e.target && e.target.classList.contains("remove-entry")) {
         e.preventDefault();
         const entry = e.target.closest(".entry");
 

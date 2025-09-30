@@ -8,11 +8,6 @@ Generalize app instance creation to support other kinds of apps.
   This is also really dangerous because the user can run intentionally or accidentally
   malicious code.
 
-In some cases when an instance is stopped (not killed?), it loses advanced settings.
-This seems to also make it so if the app is started again (even with replaced advanced settings?),
-it creates instance directories and stuff as root, making it impossible to remove instance data.
-I think this also makes file transfer impossible between some applications.
-
 Make sure the system doesn't crash if there is no SSH certificate keys.
 
 Prevent adding an instance with a URL path that is already in use.
