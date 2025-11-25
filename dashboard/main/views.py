@@ -66,7 +66,8 @@ def get_instance_statuses(instances=None):
         containers = []
 
         for c in containers_raw:
-            if c.name != inst.app_name:
+            # if c.name != inst.app_name:
+            if inst.app_name not in c.name:
                 # Skip containers that don't exactly match the app name
                 continue
             containers.append(c)
@@ -724,7 +725,8 @@ def create_app_instance(request, using_compose=False):
         else:
             return render(request, "create_compose_instance.html", { "form": form })
 
-    del request.session["preset"]
+    if ("preset" in request.session):
+        del request.session["preset"]
 
     # Dashboard will always know which instances can transmit to which.
     # Instances should always ask what they can do before trying to do things.
